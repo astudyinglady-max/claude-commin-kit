@@ -98,12 +98,17 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;color:#1e293b;min-heig
     </div>
     <div class="progress-wrap"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
     <div class="progress-label" id="progress-label">전체 진도 0% (0 / 0 완료)</div>
-    <button class="reset-btn" onclick="resetAll()">🔄 전체 초기화</button>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:12px">
+      <button class="reset-btn" style="margin:0" onclick="resetAll()">🔄 전체 초기화</button>
+      <button class="reset-btn" style="margin:0;background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe" onclick="saveToFile()">💾 파일로 저장</button>
+    </div>
   </div>
   <div id="phases-container"></div>
   <div class="tip">💡 <strong>각 단계 완료 순서:</strong> STEP 완료 → 프롬프트 복사해서 실행 → LOG 기록 → QC 체크 → GIT 커밋 → PR → 다음 단계</div>
 </div>
 
+<!-- Auto-generated workflow state bridge (created by: node kit/cli.mjs sync) -->
+<script src="../.workflow/state.js" onerror="void 0"></script>
 <script>
 const PHASES = [
   {id:0,name:"🚀 Git & 스프린트 초기화",sub:"저장소 & GitHub Projects 세팅",color:"#0f172a",bg:"#f1f5f9",border:"#cbd5e1",
@@ -192,6 +197,32 @@ const PHASES = [
 const SK = 'ccwf_v5';
 let state = JSON.parse(localStorage.getItem(SK) || '{"checks":{},"openPhases":{},"openSteps":{},"openSections":{}}');
 function save(){ localStorage.setItem(SK, JSON.stringify(state)); }
+
+// Merge CLI state (from .workflow/state.js) into checks
+function mergeCliState() {
+  const ws = window.__WORKFLOW_STATE__;
+  if (!ws || !Array.isArray(ws.completedSteps)) return;
+  ws.completedSteps.forEach(stepId => {
+    // stepId format: "p{phaseId}s{stepIndex}" → check key: "{phaseId}-s-{stepIndex}"
+    const m = stepId.match(/^p(\d+)s(\d+)$/);
+    if (m) {
+      const key = `${m[1]}-s-${m[2]}`;
+      state.checks[key] = true;
+    }
+  });
+  save();
+}
+
+// "파일로 저장" — downloads current state.json equivalent
+function saveToFile() {
+  const ws = window.__WORKFLOW_STATE__;
+  const data = ws || { note: 'Run: node kit/cli.mjs sync to generate state.js', checks: state.checks };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'workflow-state.json';
+  a.click();
+}
 
 function getTotals(){
   let total=0, done=0;
@@ -370,6 +401,7 @@ function render(){
   updateProgress();
 }
 
+mergeCliState();
 render();
 </script>
 </body>

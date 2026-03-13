@@ -192,6 +192,8 @@
   </div>
 </div>
 
+<!-- Auto-generated workflow state bridge (created by: node kit/cli.mjs sync) -->
+<script src="../.workflow/state.js" onerror="void 0"></script>
 <script>
 const PHASES = [
   {id:0,name:"🚀 Git & 스프린트 초기화",sub:"저장소 & GitHub Projects 세팅",color:"#0f172a",steps:[
@@ -246,6 +248,47 @@ const PHASES = [
 const ROLES = ["전체","기획","디자인","프론트","백엔드"];
 let state = JSON.parse(localStorage.getItem('pb_state') || '{"projects":[],"selected":null,"stepData":{}}');
 let openPhases = {};
+
+// Merge CLI state (from .workflow/state.js) into project board
+function mergeCliState() {
+  const ws = window.__WORKFLOW_STATE__;
+  if (!ws || !Array.isArray(ws.completedSteps)) return;
+
+  const projectName = ws.project && ws.project.name ? ws.project.name : null;
+  if (!projectName) return;
+
+  // Find or create a CLI-synced project
+  const CLI_PROJECT_ID = 'workflow_cli_sync';
+  let proj = state.projects.find(p => p.id === CLI_PROJECT_ID);
+
+  if (!proj) {
+    proj = {
+      id: CLI_PROJECT_ID,
+      name: projectName,
+      status: 'active',
+      start: '',
+      end: '',
+      desc: ws.project.description || 'CLI 워크플로우 동기화 프로젝트',
+      created: ws.updatedAt || new Date().toISOString(),
+    };
+    state.projects.unshift(proj);
+  } else {
+    // Update name if changed
+    proj.name = projectName;
+  }
+
+  if (!state.stepData[CLI_PROJECT_ID]) state.stepData[CLI_PROJECT_ID] = {};
+
+  // Mark completed steps
+  ws.completedSteps.forEach(stepId => {
+    if (!state.stepData[CLI_PROJECT_ID][stepId]) state.stepData[CLI_PROJECT_ID][stepId] = {};
+    state.stepData[CLI_PROJECT_ID][stepId].done = true;
+  });
+
+  // Auto-select if nothing selected
+  if (!state.selected) state.selected = CLI_PROJECT_ID;
+  save();
+}
 
 function save(){ localStorage.setItem('pb_state', JSON.stringify(state)) }
 
@@ -466,6 +509,7 @@ function exportData(){
   a.download = 'project-board-backup.json'; a.click();
 }
 
+mergeCliState();
 renderProjects();
 </script>
 </body>

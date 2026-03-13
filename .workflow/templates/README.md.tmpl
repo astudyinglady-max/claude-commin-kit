@@ -1,0 +1,72 @@
+# {{project.name}}
+
+> {{project.description}}
+
+## 프로젝트 개요
+
+[서비스 한 줄 설명]
+
+## 주요 기능
+
+- 기능 1
+- 기능 2
+- 기능 3
+
+## 기술 스택
+
+| 영역 | 기술 |
+|------|------|
+| 프론트엔드 | Next.js 15, TypeScript, Tailwind CSS |
+| 백엔드 | Node.js, Express, TypeScript |
+| 데이터베이스 | PostgreSQL, Prisma |
+| 인프라 | Docker, GitHub Actions |
+
+## 로컬 실행 방법
+
+```bash
+# 저장소 클론
+git clone <repo-url>
+cd {{project.name}}
+
+# 의존성 설치
+npm install
+
+# 환경변수 설정
+cp .env.example .env.local
+# .env.local 파일을 열어 필요한 값 입력
+
+# 개발 서버 실행
+npm run dev
+```
+
+## 환경변수
+
+| 변수 | 설명 | 예시 |
+|------|------|------|
+| `DATABASE_URL` | PostgreSQL 연결 URL | `postgresql://user:pass@localhost:5432/db` |
+| `JWT_SECRET` | JWT 서명 키 | `your-secret-key` |
+| `NEXT_PUBLIC_API_URL` | API 서버 URL | `http://localhost:3001` |
+
+## 폴더 구조
+
+```
+{{project.name}}/
+├── app/               # Next.js App Router
+├── components/        # React 컴포넌트
+├── hooks/             # 커스텀 훅
+├── lib/               # 유틸리티
+├── server/            # 백엔드 서버
+└── docs/              # 프로젝트 문서
+```
+
+## 문서
+
+- [요구사항](./docs/요구사항.md)
+- [기술스택](./docs/기술스택.md)
+- [디자인 시스템](./docs/디자인.md)
+- [API 명세](./docs/api.md)
+- [스프린트 로그](./docs/sprint-log.md)
+
+---
+
+Sprint {{sprint}} | Updated: {{date}}

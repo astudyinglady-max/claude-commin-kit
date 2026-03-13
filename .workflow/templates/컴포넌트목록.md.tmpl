@@ -1,0 +1,127 @@
+# 컴포넌트 목록
+
+**프로젝트**: {{project.name}}
+**작성일**: {{date}}
+
+---
+
+## UI 기본 컴포넌트
+
+### Button
+
+**파일**: `components/ui/Button.tsx`
+
+| Prop | 타입 | 기본값 | 설명 |
+|------|------|--------|------|
+| variant | `'primary' \| 'secondary' \| 'ghost' \| 'danger' \| 'outline'` | `'primary'` | 스타일 변형 |
+| size | `'sm' \| 'md' \| 'lg'` | `'md'` | 크기 |
+| disabled | `boolean` | `false` | 비활성화 |
+| loading | `boolean` | `false` | 로딩 상태 |
+| onClick | `() => void` | — | 클릭 핸들러 |
+| children | `ReactNode` | — | 버튼 내용 |
+
+**상태**: default / hover / focus / disabled / loading
+
+---
+
+### Input
+
+**파일**: `components/ui/Input.tsx`
+
+| Prop | 타입 | 기본값 | 설명 |
+|------|------|--------|------|
+| type | `string` | `'text'` | input 타입 |
+| label | `string` | — | 레이블 |
+| placeholder | `string` | — | 플레이스홀더 |
+| error | `string` | — | 에러 메시지 |
+| disabled | `boolean` | `false` | 비활성화 |
+| value | `string` | — | 제어 컴포넌트 값 |
+| onChange | `(e) => void` | — | 변경 핸들러 |
+
+**상태**: default / focus / error / disabled
+
+---
+
+### Card
+
+**파일**: `components/ui/Card.tsx`
+
+| Prop | 타입 | 기본값 | 설명 |
+|------|------|--------|------|
+| children | `ReactNode` | — | 카드 내용 |
+| padding | `'sm' \| 'md' \| 'lg'` | `'md'` | 내부 패딩 |
+| hoverable | `boolean` | `false` | 호버 효과 |
+| onClick | `() => void` | — | 클릭 핸들러 |
+
+---
+
+### Modal
+
+**파일**: `components/ui/Modal.tsx`
+
+| Prop | 타입 | 기본값 | 설명 |
+|------|------|--------|------|
+| isOpen | `boolean` | — | 열림 상태 |
+| onClose | `() => void` | — | 닫기 핸들러 |
+| title | `string` | — | 모달 제목 |
+| size | `'sm' \| 'md' \| 'lg'` | `'md'` | 크기 |
+| children | `ReactNode` | — | 모달 내용 |
+
+---
+
+## 레이아웃 컴포넌트
+
+### Header
+
+**파일**: `components/layout/Header.tsx`
+
+| Prop | 타입 | 설명 |
+|------|------|------|
+| user | `User \| null` | 로그인 사용자 정보 |
+
+**기능**: 로고, 네비게이션, 사용자 메뉴, 모바일 햄버거
+
+---
+
+### Sidebar
+
+**파일**: `components/layout/Sidebar.tsx`
+
+| Prop | 타입 | 설명 |
+|------|------|------|
+| isOpen | `boolean` | 열림 상태 |
+| onClose | `() => void` | 닫기 핸들러 |
+
+---
+
+## 피드백 컴포넌트
+
+### Toast / Alert
+
+**파일**: `components/ui/Toast.tsx`
+
+| Prop | 타입 | 설명 |
+|------|------|------|
+| type | `'success' \| 'error' \| 'warning' \| 'info'` | 타입 |
+| message | `string` | 메시지 |
+| duration | `number` | 표시 시간 (ms) |
+
+---
+
+### Skeleton
+
+**파일**: `components/ui/Skeleton.tsx`
+
+| Prop | 타입 | 설명 |
+|------|------|------|
+| width | `string` | 너비 |
+| height | `string` | 높이 |
+| rounded | `boolean` | 원형 여부 |
+
+---
+
+## 변경 이력
+
+| 날짜 | 변경 내용 |
+|------|----------|
+| {{date}} | 최초 작성 |
