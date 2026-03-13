@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 import readline from 'node:readline';
 
@@ -22,8 +23,15 @@ const c = (color, text) => `${C[color]}${text}${C.reset}`;
 const bold = (text) => `${C.bold}${text}${C.reset}`;
 
 // ─── Paths ───────────────────────────────────────────────────────────────────
-const ROOT = process.cwd();
-const WORKFLOW_DIR  = path.join(ROOT, '.workflow');
+// KIT_ROOT: 이 스크립트가 어디서 실행되든 kit 루트를 정확히 찾음
+// - standalone:  project/.workflow/  (cwd === kit root)
+// - submodule:   project/.kit/.workflow/  (kit root ≠ cwd)
+// - npx:         ~/.npm/_npx/.../claude-commin-kit/.workflow/
+const __kitfile = fileURLToPath(import.meta.url);       // .../kit/cli.mjs
+const KIT_ROOT  = path.resolve(path.dirname(__kitfile), '..'); // .../kit → ..
+
+const ROOT          = process.cwd();                          // 사용자 프로젝트 루트 (템플릿 출력 경로)
+const WORKFLOW_DIR  = path.join(KIT_ROOT, '.workflow');       // kit 내부 .workflow/
 const CONFIG_PATH   = path.join(WORKFLOW_DIR, 'config.json');
 const STATE_PATH    = path.join(WORKFLOW_DIR, 'state.json');
 const STATUS_PATH   = path.join(WORKFLOW_DIR, 'status.md');
