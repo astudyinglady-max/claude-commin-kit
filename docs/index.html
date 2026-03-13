@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Board</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',sans-serif;background:#f1f5f9;color:#1e293b;min-height:100vh}
+  :root{--purple:#8b5cf6;--pink:#ec4899;--blue:#0ea5e9;--green:#10b981;--amber:#f59e0b;--slate:#0f172a}
+
+  /* HEADER */
+  .header{background:#fff;border-bottom:1px solid #e2e8f0;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+  .header h1{font-size:18px;font-weight:700;color:#1e293b}
+  .header-right{display:flex;gap:8px}
+  .btn{padding:7px 14px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s}
+  .btn-primary{background:#6366f1;color:#fff}
+  .btn-primary:hover{background:#4f46e5}
+  .btn-outline{background:#fff;color:#475569;border:1px solid #e2e8f0}
+  .btn-outline:hover{background:#f8fafc}
+  .btn-danger{background:#fee2e2;color:#dc2626;border:1px solid #fecaca}
+
+  /* TABS */
+  .tabs{display:flex;gap:4px;padding:16px 24px 0;background:#fff;border-bottom:1px solid #e2e8f0}
+  .tab{padding:8px 16px;border-radius:8px 8px 0 0;font-size:13px;font-weight:600;cursor:pointer;color:#64748b;border:1px solid transparent;border-bottom:none;transition:all .15s}
+  .tab.active{background:#f8fafc;color:#6366f1;border-color:#e2e8f0;margin-bottom:-1px;border-bottom:1px solid #f8fafc}
+
+  /* MAIN */
+  .main{padding:20px 24px;max-width:1100px;margin:0 auto}
+
+  /* PROJECT LIST */
+  .project-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:20px}
+  .project-card{background:#fff;border-radius:12px;border:1.5px solid #e2e8f0;padding:16px;cursor:pointer;transition:all .15s}
+  .project-card:hover{border-color:#6366f1;box-shadow:0 4px 12px rgba(99,102,241,.1)}
+  .project-card.selected{border-color:#6366f1;box-shadow:0 4px 12px rgba(99,102,241,.15)}
+  .pc-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+  .pc-title{font-size:15px;font-weight:700;color:#1e293b}
+  .pc-badge{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600}
+  .badge-active{background:#dbeafe;color:#1d4ed8}
+  .badge-done{background:#dcfce7;color:#15803d}
+  .badge-hold{background:#fef3c7;color:#b45309}
+  .pc-progress-wrap{background:#e2e8f0;border-radius:999px;height:6px;margin:8px 0}
+  .pc-progress-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#6366f1,#0ea5e9);transition:width .4s}
+  .pc-meta{display:flex;justify-content:space-between;font-size:12px;color:#64748b;margin-top:6px}
+  .pc-actions{display:flex;gap:6px;margin-top:10px}
+
+  /* ADD PROJECT FORM */
+  .form-card{background:#fff;border-radius:12px;border:1.5px solid #e2e8f0;padding:20px;margin-bottom:20px}
+  .form-title{font-size:15px;font-weight:700;margin-bottom:14px}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .form-group{display:flex;flex-direction:column;gap:4px}
+  .form-group.full{grid-column:1/-1}
+  label{font-size:12px;font-weight:600;color:#475569}
+  input,select,textarea{padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;color:#1e293b;background:#fff;font-family:inherit}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:#6366f1}
+  textarea{resize:vertical;min-height:60px}
+
+  /* BOARD */
+  .board-header{background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:16px 20px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+  .board-title{font-size:17px;font-weight:700}
+  .board-stats{display:flex;gap:12px}
+  .stat{text-align:center}
+  .stat-num{font-size:18px;font-weight:700;color:#6366f1}
+  .stat-label{font-size:11px;color:#94a3b8}
+
+  .phase-block{background:#fff;border-radius:12px;border:1.5px solid #e2e8f0;margin-bottom:12px;overflow:hidden;transition:border .2s}
+  .phase-block.ph-0{border-left:4px solid var(--slate)}
+  .phase-block.ph-1{border-left:4px solid var(--purple)}
+  .phase-block.ph-2{border-left:4px solid var(--pink)}
+  .phase-block.ph-3{border-left:4px solid var(--blue)}
+  .phase-block.ph-4{border-left:4px solid var(--green)}
+  .phase-block.ph-5{border-left:4px solid var(--amber)}
+
+  .phase-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer}
+  .phase-head-left{display:flex;align-items:center;gap:10px}
+  .phase-num{width:26px;height:26px;border-radius:50%;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .phase-info .name{font-size:14px;font-weight:700}
+  .phase-info .sub{font-size:11px;color:#94a3b8}
+  .phase-progress{display:flex;align-items:center;gap:8px;font-size:12px;color:#64748b}
+  .mini-bar{width:80px;height:6px;background:#e2e8f0;border-radius:999px;overflow:hidden}
+  .mini-fill{height:100%;border-radius:999px;transition:width .3s}
+
+  .phase-body{padding:0 16px 14px;display:none}
+  .phase-body.open{display:block}
+
+  .step-item{border:1px solid #f1f5f9;border-radius:8px;margin-bottom:8px;overflow:hidden}
+  .step-item.qa-step{border-color:#fde047;background:#fefce8}
+  .step-head{display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer}
+  .step-check{width:20px;height:20px;border-radius:5px;border:2px solid #cbd5e1;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;transition:all .15s}
+  .step-check.done{background:#10b981;border-color:#10b981}
+  .step-label{flex:1;font-size:13px;font-weight:600;color:#1e293b}
+  .step-label.done{text-decoration:line-through;color:#94a3b8}
+  .step-badge{font-size:10px;padding:1px 6px;border-radius:4px;background:#6366f1;color:#fff;font-weight:700}
+  .step-meta{display:flex;gap:6px;align-items:center}
+  .assignee-tag{font-size:11px;padding:2px 7px;border-radius:20px;font-weight:600}
+
+  .step-detail{padding:10px 12px;border-top:1px solid #f1f5f9;background:#fafafa}
+  .detail-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px}
+  .detail-field{display:flex;flex-direction:column;gap:3px}
+  .detail-field label{font-size:11px;font-weight:600;color:#64748b}
+  .detail-field input,
+  .detail-field select{font-size:12px;padding:5px 8px}
+  .memo-area{width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;resize:vertical;min-height:50px;font-family:inherit}
+  .memo-area:focus{outline:none;border-color:#6366f1}
+  .comments{margin-top:8px}
+  .comment-item{background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:8px 10px;margin-bottom:6px;font-size:12px}
+  .comment-meta{color:#94a3b8;font-size:11px;margin-bottom:3px}
+  .comment-input-row{display:flex;gap:6px;margin-top:6px}
+  .comment-input-row input{flex:1;font-size:12px;padding:6px 10px}
+  .comment-input-row button{padding:6px 12px;font-size:12px;background:#6366f1;color:#fff;border:none;border-radius:6px;cursor:pointer}
+
+  /* ASSIGNEE COLORS */
+  .role-기획{background:#ede9fe;color:#6d28d9}
+  .role-디자인{background:#fce7f3;color:#be185d}
+  .role-프론트{background:#e0f2fe;color:#0369a1}
+  .role-백엔드{background:#d1fae5;color:#065f46}
+  .role-전체{background:#f1f5f9;color:#475569}
+
+  .empty-state{text-align:center;padding:48px;color:#94a3b8;font-size:14px}
+  .divider{height:1px;background:#e2e8f0;margin:12px 0}
+  .toggle-arrow{font-size:14px;color:#94a3b8;transition:transform .2s}
+  .toggle-arrow.open{transform:rotate(180deg)}
+
+  @media(max-width:600px){
+    .form-grid{grid-template-columns:1fr}
+    .detail-grid{grid-template-columns:1fr 1fr}
+    .board-stats{gap:8px}
+    .main{padding:12px}
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>⚡ Project Board</h1>
+  <div class="header-right">
+    <button class="btn btn-outline" onclick="exportData()">📥 내보내기</button>
+    <button class="btn btn-primary" onclick="showTab('projects')">+ 프로젝트</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('projects')" id="tab-projects">📋 프로젝트 목록</div>
+  <div class="tab" onclick="showTab('board')" id="tab-board">📊 작업 보드</div>
+</div>
+
+<div class="main">
+  <!-- PROJECTS TAB -->
+  <div id="view-projects">
+    <div class="form-card" id="add-project-form">
+      <div class="form-title">➕ 새 프로젝트 추가</div>
+      <div class="form-grid">
+        <div class="form-group"><label>프로젝트명 *</label><input id="inp-name" placeholder="예: 쇼핑몰 리뉴얼"></div>
+        <div class="form-group"><label>상태</label>
+          <select id="inp-status">
+            <option value="active">진행중</option>
+            <option value="done">완료</option>
+            <option value="hold">보류</option>
+          </select>
+        </div>
+        <div class="form-group"><label>시작일</label><input type="date" id="inp-start"></div>
+        <div class="form-group"><label>마감일</label><input type="date" id="inp-end"></div>
+        <div class="form-group full"><label>설명</label><textarea id="inp-desc" placeholder="프로젝트 간단 설명"></textarea></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+        <button class="btn btn-outline" onclick="document.getElementById('add-project-form').style.display='none'">취소</button>
+        <button class="btn btn-primary" onclick="addProject()">프로젝트 추가</button>
+      </div>
+    </div>
+
+    <div class="project-grid" id="project-list"></div>
+    <div class="empty-state" id="empty-projects" style="display:none">아직 프로젝트가 없어요. 위에서 추가해 보세요!</div>
+  </div>
+
+  <!-- BOARD TAB -->
+  <div id="view-board" style="display:none">
+    <div id="board-no-project" class="empty-state">프로젝트를 먼저 선택해 주세요.</div>
+    <div id="board-content" style="display:none">
+      <div class="board-header">
+        <div>
+          <div class="board-title" id="board-proj-name"></div>
+          <div style="font-size:12px;color:#94a3b8;margin-top:2px" id="board-proj-desc"></div>
+        </div>
+        <div class="board-stats">
+          <div class="stat"><div class="stat-num" id="stat-pct">0%</div><div class="stat-label">전체 진도</div></div>
+          <div class="stat"><div class="stat-num" id="stat-done">0</div><div class="stat-label">완료</div></div>
+          <div class="stat"><div class="stat-num" id="stat-total">0</div><div class="stat-label">전체</div></div>
+        </div>
+      </div>
+      <div id="phases-container"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const PHASES = [
+  {id:0,name:"🚀 Git & 스프린트 초기화",sub:"저장소 & GitHub Projects 세팅",color:"#0f172a",steps:[
+    {id:"p0s0",label:"Git 저장소 초기화",qa:false},
+    {id:"p0s1",label:"브랜치 전략 설정",qa:false},
+    {id:"p0s2",label:"GitHub Projects 스프린트 구성",qa:false}
+  ]},
+  {id:1,name:"📋 기획",sub:"프로젝트의 뼈대를 잡는 단계",color:"#8b5cf6",steps:[
+    {id:"p1s0",label:"프로젝트 초기 설정 (README, CLAUDE.md)",qa:false},
+    {id:"p1s1",label:"요구사항 & 차별화 정의",qa:true},
+    {id:"p1s2",label:"기술 스택 선택 근거 문서화",qa:true},
+    {id:"p1s3",label:"기획 QC",qa:false,isQC:true},
+    {id:"p1s4",label:"스프린트 진행 기록 (sprint-log.md)",qa:true},
+    {id:"p1s5",label:"Git 커밋 & PR",qa:false}
+  ]},
+  {id:2,name:"🎨 디자인",sub:"UI 규칙과 컴포넌트 설계",color:"#ec4899",steps:[
+    {id:"p2s0",label:"디자인 시스템 정의 (디자인.md)",qa:false},
+    {id:"p2s1",label:"컴포넌트 설계 (컴포넌트목록.md)",qa:false},
+    {id:"p2s2",label:"페이지 & 사용자 흐름 설계",qa:true},
+    {id:"p2s3",label:"디자인 QC",qa:false,isQC:true},
+    {id:"p2s4",label:"스프린트 진행 기록",qa:true},
+    {id:"p2s5",label:"Git 커밋 & PR",qa:false}
+  ]},
+  {id:3,name:"🖥️ 프론트엔드",sub:"실제 화면 구현 단계",color:"#0ea5e9",steps:[
+    {id:"p3s0",label:"프로젝트 초기화 & Jest 테스트 환경",qa:true},
+    {id:"p3s1",label:"공통 컴포넌트 생성 + 단위 테스트",qa:true},
+    {id:"p3s2",label:"레이아웃 구성",qa:false},
+    {id:"p3s3",label:"페이지 구현",qa:false},
+    {id:"p3s4",label:"API 연동 & 상태관리 + 훅 테스트",qa:true},
+    {id:"p3s5",label:"프론트엔드 QC",qa:false,isQC:true},
+    {id:"p3s6",label:"스프린트 진행 기록",qa:true},
+    {id:"p3s7",label:"Git 커밋 & PR",qa:false}
+  ]},
+  {id:4,name:"⚙️ 백엔드",sub:"서버 & 데이터 구현 단계",color:"#10b981",steps:[
+    {id:"p4s0",label:"서버 초기화 & Jest 테스트 환경",qa:true},
+    {id:"p4s1",label:"DB 설계 & 연결 (Prisma schema)",qa:false},
+    {id:"p4s2",label:"인증 구현 + 단위 테스트",qa:true},
+    {id:"p4s3",label:"API 라우터 구현 + 단위 테스트",qa:true},
+    {id:"p4s4",label:"배포 & CI/CD 자동 테스트 설정",qa:true},
+    {id:"p4s5",label:"백엔드 QC",qa:false,isQC:true},
+    {id:"p4s6",label:"스프린트 진행 기록",qa:true},
+    {id:"p4s7",label:"Git 커밋 & PR",qa:false}
+  ]},
+  {id:5,name:"🔀 스프린트 마무리",sub:"develop → main 머지 & 다음 스프린트",color:"#f59e0b",steps:[
+    {id:"p5s0",label:"E2E 통합 테스트 (Playwright)",qa:true},
+    {id:"p5s1",label:"스프린트 회고 작성",qa:true},
+    {id:"p5s2",label:"다음 스프린트 계획",qa:false},
+    {id:"p5s3",label:"develop → main 머지 & 태그",qa:false}
+  ]}
+];
+
+const ROLES = ["전체","기획","디자인","프론트","백엔드"];
+let state = JSON.parse(localStorage.getItem('pb_state') || '{"projects":[],"selected":null,"stepData":{}}');
+let openPhases = {};
+
+function save(){ localStorage.setItem('pb_state', JSON.stringify(state)) }
+
+function showTab(t){
+  document.getElementById('view-projects').style.display = t==='projects'?'block':'none';
+  document.getElementById('view-board').style.display = t==='board'?'block':'none';
+  document.querySelectorAll('.tab').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  if(t==='board') renderBoard();
+}
+
+function addProject(){
+  const name = document.getElementById('inp-name').value.trim();
+  if(!name){ alert('프로젝트명을 입력해 주세요.'); return; }
+  const p = {
+    id: 'p_'+Date.now(),
+    name,
+    status: document.getElementById('inp-status').value,
+    start: document.getElementById('inp-start').value,
+    end: document.getElementById('inp-end').value,
+    desc: document.getElementById('inp-desc').value,
+    created: new Date().toISOString()
+  };
+  state.projects.push(p);
+  if(!state.stepData[p.id]) state.stepData[p.id] = {};
+  save();
+  ['inp-name','inp-start','inp-end','inp-desc'].forEach(id=>document.getElementById(id).value='');
+  renderProjects();
+  selectProject(p.id);
+  showTab('board');
+}
+
+function deleteProject(id){
+  if(!confirm('프로젝트를 삭제할까요?')) return;
+  state.projects = state.projects.filter(p=>p.id!==id);
+  if(state.selected===id) state.selected=null;
+  save(); renderProjects();
+}
+
+function selectProject(id){
+  state.selected = id; save();
+  renderProjects();
+  showTab('board');
+}
+
+function getProgress(pid){
+  const sd = state.stepData[pid]||{};
+  const total = PHASES.reduce((a,ph)=>a+ph.steps.length,0);
+  const done = PHASES.reduce((a,ph)=>a+ph.steps.filter(s=>sd[s.id]?.done).length,0);
+  return {total,done,pct:total?Math.round(done/total*100):0};
+}
+
+function renderProjects(){
+  const list = document.getElementById('project-list');
+  const empty = document.getElementById('empty-projects');
+  if(!state.projects.length){ list.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  const statusLabel = {active:'진행중',done:'완료',hold:'보류'};
+  const statusClass = {active:'badge-active',done:'badge-done',hold:'badge-hold'};
+  list.innerHTML = state.projects.map(p=>{
+    const {pct,done,total} = getProgress(p.id);
+    const sel = state.selected===p.id;
+    return `<div class="project-card${sel?' selected':''}" onclick="selectProject('${p.id}')">
+      <div class="pc-header">
+        <div class="pc-title">${p.name}</div>
+        <span class="pc-badge ${statusClass[p.status]}">${statusLabel[p.status]}</span>
+      </div>
+      ${p.desc?`<div style="font-size:12px;color:#64748b;margin-bottom:6px">${p.desc}</div>`:''}
+      <div class="pc-progress-wrap"><div class="pc-progress-fill" style="width:${pct}%"></div></div>
+      <div class="pc-meta">
+        <span>${done}/${total} 완료 (${pct}%)</span>
+        <span>${p.end?'마감: '+p.end:''}</span>
+      </div>
+      <div class="pc-actions">
+        <button class="btn btn-primary" style="font-size:11px;padding:4px 10px" onclick="event.stopPropagation();selectProject('${p.id}');showTab('board')">보드 열기</button>
+        <button class="btn btn-danger" style="font-size:11px;padding:4px 10px" onclick="event.stopPropagation();deleteProject('${p.id}')">삭제</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderBoard(){
+  const noProj = document.getElementById('board-no-project');
+  const content = document.getElementById('board-content');
+  if(!state.selected){ noProj.style.display='block'; content.style.display='none'; return; }
+  const proj = state.projects.find(p=>p.id===state.selected);
+  if(!proj){ noProj.style.display='block'; content.style.display='none'; return; }
+  noProj.style.display='none'; content.style.display='block';
+
+  const {pct,done,total} = getProgress(proj.id);
+  document.getElementById('board-proj-name').textContent = proj.name;
+  document.getElementById('board-proj-desc').textContent = proj.desc||'';
+  document.getElementById('stat-pct').textContent = pct+'%';
+  document.getElementById('stat-done').textContent = done;
+  document.getElementById('stat-total').textContent = total;
+
+  const sd = state.stepData[proj.id]||{};
+  const container = document.getElementById('phases-container');
+  container.innerHTML = PHASES.map(ph=>{
+    const pDone = ph.steps.filter(s=>sd[s.id]?.done).length;
+    const pPct = Math.round(pDone/ph.steps.length*100);
+    const isOpen = openPhases[ph.id]!==false;
+    return `<div class="phase-block ph-${ph.id}">
+      <div class="phase-head" onclick="togglePhase(${ph.id})">
+        <div class="phase-head-left">
+          <div class="phase-num" style="background:${ph.color}">${ph.id}</div>
+          <div class="phase-info">
+            <div class="name">${ph.name}</div>
+            <div class="sub">${ph.sub}</div>
+          </div>
+        </div>
+        <div class="phase-progress">
+          <span>${pDone}/${ph.steps.length}</span>
+          <div class="mini-bar"><div class="mini-fill" style="width:${pPct}%;background:${ph.color}"></div></div>
+          <span class="toggle-arrow${isOpen?' open':''}">▾</span>
+        </div>
+      </div>
+      <div class="phase-body${isOpen?' open':''}">
+        ${ph.steps.map(step=>{
+          const s = sd[step.id]||{};
+          const isDone = !!s.done;
+          const role = s.role||'전체';
+          return `<div class="step-item${step.qa?' qa-step':''}">
+            <div class="step-head">
+              <div class="step-check${isDone?' done':''}" onclick="toggleStep('${step.id}')">
+                ${isDone?'<span style="color:#fff;font-size:12px">✓</span>':''}
+              </div>
+              <div class="step-label${isDone?' done':''}" onclick="toggleDetail('${step.id}')">${step.label}${step.isQC?' ✅':''}</div>
+              ${step.qa?'<span class="step-badge">★ QA</span>':''}
+              <span class="assignee-tag role-${role}" style="font-size:11px;padding:2px 7px;border-radius:20px;font-weight:600">${role}</span>
+              <span style="font-size:14px;color:#94a3b8;cursor:pointer" onclick="toggleDetail('${step.id}')">⋯</span>
+            </div>
+            <div class="step-detail" id="detail-${step.id}" style="display:none">
+              <div class="detail-grid">
+                <div class="detail-field">
+                  <label>담당자</label>
+                  <select onchange="updateStep('${step.id}','role',this.value)">
+                    ${ROLES.map(r=>`<option value="${r}"${role===r?' selected':''}>${r}</option>`).join('')}
+                  </select>
+                </div>
+                <div class="detail-field">
+                  <label>완료일</label>
+                  <input type="date" value="${s.doneDate||''}" onchange="updateStep('${step.id}','doneDate',this.value)">
+                </div>
+                <div class="detail-field">
+                  <label>마감일</label>
+                  <input type="date" value="${s.deadline||''}" onchange="updateStep('${step.id}','deadline',this.value)">
+                </div>
+              </div>
+              <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px">메모</label>
+              <textarea class="memo-area" placeholder="메모를 남겨보세요..." onchange="updateStep('${step.id}','memo',this.value)">${s.memo||''}</textarea>
+              <div class="divider"></div>
+              <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:6px">💬 코멘트</label>
+              <div class="comments" id="comments-${step.id}">
+                ${(s.comments||[]).map((c,i)=>`<div class="comment-item">
+                  <div class="comment-meta">${c.author} · ${c.date}</div>
+                  <div>${c.text}</div>
+                </div>`).join('')}
+              </div>
+              <div class="comment-input-row">
+                <input id="ci-${step.id}" placeholder="코멘트 입력..." onkeydown="if(event.key==='Enter')addComment('${step.id}')">
+                <button onclick="addComment('${step.id}')">등록</button>
+              </div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function togglePhase(id){
+  openPhases[id] = openPhases[id]===false ? true : false;
+  renderBoard();
+}
+
+function toggleDetail(sid){
+  const el = document.getElementById('detail-'+sid);
+  if(el) el.style.display = el.style.display==='none'?'block':'none';
+}
+
+function toggleStep(sid){
+  if(!state.selected) return;
+  const sd = state.stepData[state.selected];
+  if(!sd[sid]) sd[sid]={};
+  sd[sid].done = !sd[sid].done;
+  if(sd[sid].done && !sd[sid].doneDate) sd[sid].doneDate = new Date().toISOString().split('T')[0];
+  save(); renderBoard(); renderProjects();
+}
+
+function updateStep(sid, key, val){
+  if(!state.selected) return;
+  const sd = state.stepData[state.selected];
+  if(!sd[sid]) sd[sid]={};
+  sd[sid][key]=val; save();
+}
+
+function addComment(sid){
+  const inp = document.getElementById('ci-'+sid);
+  const text = inp.value.trim();
+  if(!text) return;
+  if(!state.selected) return;
+  const sd = state.stepData[state.selected];
+  if(!sd[sid]) sd[sid]={};
+  if(!sd[sid].comments) sd[sid].comments=[];
+  sd[sid].comments.push({text, author:'나', date: new Date().toLocaleDateString('ko-KR')});
+  inp.value=''; save();
+  const box = document.getElementById('comments-'+sid);
+  if(box) box.innerHTML = sd[sid].comments.map(c=>`<div class="comment-item">
+    <div class="comment-meta">${c.author} · ${c.date}</div>
+    <div>${c.text}</div>
+  </div>`).join('');
+}
+
+function exportData(){
+  const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download = 'project-board-backup.json'; a.click();
+}
+
+renderProjects();
+</script>
+</body>
+</html>
