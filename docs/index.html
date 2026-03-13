@@ -141,6 +141,7 @@
 
 <div class="tabs">
   <div class="tab active" onclick="showTab('projects')" id="tab-projects">📋 프로젝트 목록</div>
+  <div class="tab" onclick="showTab('workflow')" id="tab-workflow">📋 작업 목록</div>
   <div class="tab" onclick="showTab('board')" id="tab-board">📊 작업 보드</div>
 </div>
 
@@ -170,6 +171,11 @@
 
     <div class="project-grid" id="project-list"></div>
     <div class="empty-state" id="empty-projects" style="display:none">아직 프로젝트가 없어요. 위에서 추가해 보세요!</div>
+  </div>
+
+  <!-- WORKFLOW TAB -->
+  <div id="view-workflow" style="display:none">
+    <iframe src="workflow.html" id="workflow-frame" style="width:100%;height:calc(100vh - 120px);border:none;border-radius:12px;display:block"></iframe>
   </div>
 
   <!-- BOARD TAB -->

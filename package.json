@@ -1,10 +1,10 @@
 {
-  "name": "claude-commin-kit",
+  "name": "claude-code-kit",
   "version": "1.0.0",
   "description": "Claude Code 프로젝트 워크플로우 에이전트 시스템 — 단계별 MD 생성, git 자동화, 상태 추적",
   "type": "module",
   "bin": {
-    "claude-commin-kit": "./kit/cli.mjs"
+    "claude-code-kit": "./kit/cli.mjs"
   },
   "files": [
     "kit/",
@@ -29,6 +29,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/astudyinglady-max/claude-commin-kit.git"
+    "url": "https://github.com/astudyinglady-max/claude-code-kit.git"
   }
 }

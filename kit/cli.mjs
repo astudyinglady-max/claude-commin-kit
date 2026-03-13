@@ -47,16 +47,22 @@ const STATE_JS_PATH   = path.join(USER_WORKFLOW, 'state.js');
 const TEMPLATES_DIR   = path.join(KIT_WORKFLOW, 'templates');
 // 하위 호환: standalone 모드(ROOT===KIT_ROOT)에서는 동일 경로이므로 마이그레이션 불필요
 const LEGACY_STATE    = path.join(KIT_WORKFLOW, 'state.json');
+// 사용자 프로젝트가 덮어쓴 config (업데이트 시에도 보존됨)
+const USER_CONFIG_PATH = path.join(USER_WORKFLOW, 'config.json');
+// 사용자 프로젝트의 CLAUDE.md (다음 할 일 자동 주입 대상)
+const CLAUDE_MD_PATH   = path.join(ROOT, 'CLAUDE.md');
 
 // ─── Core Helpers ────────────────────────────────────────────────────────────
 function loadConfig() {
-  if (!fs.existsSync(CONFIG_PATH)) {
+  // USER_CONFIG_PATH 우선 (init 시 기술 스택에 맞게 생성된 config)
+  const configPath = fs.existsSync(USER_CONFIG_PATH) ? USER_CONFIG_PATH : CONFIG_PATH;
+  if (!fs.existsSync(configPath)) {
     console.error(c('red', '❌ .workflow/config.json not found.'));
     console.error(c('yellow', '   Run: node kit/cli.mjs init'));
     process.exit(1);
   }
   try {
-    return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+    return JSON.parse(fs.readFileSync(configPath, 'utf8'));
   } catch (e) {
     console.error(c('red', `❌ Failed to parse config.json: ${e.message}`));
     process.exit(1);
@@ -95,6 +101,7 @@ function saveState(state) {
   fs.writeFileSync(STATE_PATH, JSON.stringify(state, null, 2));
   const config = loadConfig();
   syncFiles(config, state);
+  try { injectToClaude(config, state); } catch {}
 }
 
 function syncFiles(config, state) {
@@ -187,51 +194,391 @@ function confirm(question) {
   });
 }
 
+function promptQuestion(question, defaultVal = '') {
+  return new Promise(resolve => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    const suffix = defaultVal ? c('gray', ` (기본값: ${defaultVal})`) : '';
+    rl.question(`${question}${suffix}: `, ans => {
+      rl.close();
+      resolve(ans.trim() || defaultVal);
+    });
+  });
+}
+
+function promptSelect(question, options) {
+  return new Promise(resolve => {
+    console.log(bold(question));
+    options.forEach((opt, i) => {
+      console.log(`  ${c('cyan', `[${i + 1}]`)} ${bold(opt.label)}  ${c('gray', opt.desc || '')}`);
+    });
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    rl.question(c('gray', '\n선택 (숫자): '), ans => {
+      rl.close();
+      const idx = parseInt(ans.trim(), 10) - 1;
+      resolve(idx >= 0 && idx < options.length ? idx : 0);
+    });
+  });
+}
+
+// ─── Config Generator ────────────────────────────────────────────────────────
+
+function generateConfig(projectName, projectDesc, sprint, stackKey) {
+  const base = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+  const project = {
+    name: projectName,
+    description: projectDesc,
+    sprint,
+    branchStrategy: base.project.branchStrategy,
+  };
+
+  // nextjs-express, custom: 기존 config 그대로 사용
+  if (stackKey === 'nextjs-express' || stackKey === 'custom') {
+    return { ...base, project };
+  }
+
+  let phase3, phase4;
+
+  if (stackKey === 'nextjs-fullstack') {
+    phase3 = {
+      id: 3, name: '풀스택 구현', sub: 'Next.js API Routes + 컴포넌트 + DB 연동',
+      color: '#0ea5e9', bg: '#f0f9ff', border: '#bae6fd',
+      steps: [
+        {
+          id: 'p3s0', title: '프로젝트 초기화', qa: true,
+          files: ['package.json', 'tsconfig.json', 'tailwind.config.ts'],
+          templates: [],
+          prompts: [
+            'Next.js 15 + TypeScript + Tailwind CSS + Prisma 프로젝트를 세팅해줘. App Router 방식, 폴더구조.md 기반 디렉토리 생성.',
+            'Jest + React Testing Library를 설치하고 설정해줘. Next.js 환경, 절대 경로 alias(@/), 커버리지 옵션 포함.',
+          ],
+        },
+        {
+          id: 'p3s1', title: 'DB 설계 & Prisma', qa: false,
+          files: ['prisma/schema.prisma', 'lib/db.ts'],
+          templates: [],
+          prompts: [
+            '요구사항.md 기반으로 Prisma schema를 설계해줘. 모델 관계, 인덱스, createdAt/updatedAt 자동 관리, 설계 이유를 주석으로.',
+            'Prisma 클라이언트를 싱글턴 패턴으로 lib/db.ts에 작성해줘. 핫 리로드 연결 중복 방지.',
+          ],
+        },
+        {
+          id: 'p3s2', title: '공통 컴포넌트 + 단위 테스트', qa: true,
+          files: ['components/ui/Button.tsx', 'components/ui/Input.tsx', 'components/ui/Card.tsx'],
+          templates: [],
+          prompts: [
+            'Button, Input, Card, Modal 컴포넌트를 TypeScript로 만들어줘. CVA로 variant 관리, 접근성(aria) 포함.',
+            'Jest + RTL로 Button 컴포넌트 단위 테스트를 작성해줘. variant, 클릭, disabled, loading 상태 테스트.',
+          ],
+        },
+        {
+          id: 'p3s3', title: 'API Routes & 인증', qa: true,
+          files: ['app/api/auth/[...nextauth]/route.ts', 'middleware.ts'],
+          templates: [],
+          prompts: [
+            'NextAuth.js로 인증을 구현해줘. 이메일/비밀번호 + Prisma 어댑터, JWT 세션, 보호 경로 미들웨어.',
+            'Next.js API Routes로 핵심 기능 CRUD API를 구현해줘. zod 입력값 검증, 에러 응답 { success, data, error } 통일.',
+          ],
+        },
+        {
+          id: 'p3s4', title: '페이지 구현', qa: false,
+          files: ['app/page.tsx', 'app/layout.tsx'],
+          templates: [],
+          prompts: [
+            '페이지목록.md 기반으로 각 페이지를 Server Components로 구현해줘. loading.tsx, error.tsx, not-found.tsx 포함.',
+            'Suspense 기반 스켈레톤 로딩, 빈 상태(empty state), 에러 상태 UI를 각 페이지에 추가해줘.',
+          ],
+        },
+      ],
+      qc: {
+        title: '풀스택 QC',
+        checks: [
+          'TypeScript 타입 오류가 없는가? (tsc --noEmit)',
+          'API Routes에 인증/권한 검사가 적용되었는가?',
+          '단위 테스트가 주요 컴포넌트에 작성되었는가?',
+          '로딩/에러/빈 상태가 모두 처리되었는가?',
+        ],
+        prompt: '코드 전체를 검토해줘. TypeScript 오류, 인증 누락 API, 테스트 누락, N+1 쿼리, 에러 처리 누락을 항목별로 찾아줘.',
+      },
+      log: {
+        file: 'docs/sprint-log.md',
+        items: ['구현된 컴포넌트/페이지/API 목록', '테스트 커버리지'],
+        prompt: 'sprint-log.md에 풀스택 구현 단계 기록을 추가해줘. 구현 목록, 테스트 현황, 주요 결정 사항 포함.',
+      },
+      git: {
+        branch: 'feat/풀스택-스프린트1',
+        pr: 'develop',
+        commands: [
+          'git checkout -b feat/풀스택-스프린트1',
+          'git add components/ app/ lib/ prisma/',
+          'git commit -m "feat: 풀스택 구현 (컴포넌트, 페이지, API Routes, DB)"',
+          'git push origin feat/풀스택-스프린트1',
+        ],
+      },
+    };
+    phase4 = {
+      id: 4, name: '배포 & CI/CD', sub: 'GitHub Actions + Vercel 배포',
+      color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0',
+      steps: [
+        {
+          id: 'p4s0', title: 'CI/CD & Vercel 배포', qa: true,
+          files: ['.github/workflows/ci.yml'],
+          templates: [],
+          prompts: [
+            'ci.yml을 만들어줘. PR마다 TypeScript 체크 → ESLint → Jest → 커버리지 80% 미만 차단 자동 실행.',
+            'Vercel 배포 설정을 안내해줘. 환경변수, Prisma 마이그레이션 자동화, Preview 배포 설정 포함.',
+          ],
+        },
+      ],
+      qc: {
+        title: '배포 QC',
+        checks: [
+          'CI 파이프라인이 PR마다 자동 실행되는가?',
+          '환경변수가 Vercel에 올바르게 설정되었는가?',
+          'Prisma 마이그레이션이 배포 시 자동 실행되는가?',
+        ],
+        prompt: 'CI/CD 설정을 검토해줘. 누락된 환경변수, 배포 실패 시나리오, 보안 이슈를 찾아줘.',
+      },
+      log: {
+        file: 'docs/sprint-log.md',
+        items: ['배포 설정 완료 여부', 'CI 파이프라인 현황'],
+        prompt: 'sprint-log.md에 배포 단계 기록을 추가해줘.',
+      },
+      git: {
+        branch: 'feat/배포-스프린트1',
+        pr: 'develop',
+        commands: [
+          'git checkout -b feat/배포-스프린트1',
+          'git add .github/',
+          'git commit -m "ci: GitHub Actions + Vercel 배포 설정"',
+          'git push origin feat/배포-스프린트1',
+        ],
+      },
+    };
+  } else if (stackKey === 'react-fastapi') {
+    phase3 = {
+      id: 3, name: '프론트엔드', sub: 'React (Vite) 컴포넌트 & 페이지 구현',
+      color: '#0ea5e9', bg: '#f0f9ff', border: '#bae6fd',
+      steps: [
+        {
+          id: 'p3s0', title: '프로젝트 초기화', qa: true,
+          files: ['package.json', 'tsconfig.json', 'vite.config.ts'],
+          templates: [],
+          prompts: [
+            'React + Vite + TypeScript + Tailwind CSS 프로젝트를 세팅해줘. 절대 경로 alias(@/), .env 환경변수 설정 포함.',
+            'Vitest + React Testing Library를 설치하고 vite.config.ts에 test 설정을 추가해줘.',
+          ],
+        },
+        {
+          id: 'p3s1', title: '공통 컴포넌트 + 단위 테스트', qa: true,
+          files: ['src/components/ui/Button.tsx', 'src/components/ui/Input.tsx'],
+          templates: [],
+          prompts: [
+            'Button, Input, Card, Modal 컴포넌트를 TypeScript로 만들어줘. CVA로 variant 관리, 접근성 포함.',
+            'Vitest + RTL로 Button 컴포넌트 단위 테스트를 작성해줘.',
+          ],
+        },
+        {
+          id: 'p3s2', title: 'API 연동 & 상태관리', qa: true,
+          files: ['src/lib/api.ts', 'src/hooks'],
+          templates: [],
+          prompts: [
+            'TanStack Query + axios로 API 클라이언트를 설정해줘. JWT 토큰 자동 첨부, 401 자동 갱신, 공통 에러 타입.',
+            '핵심 기능 커스텀 훅을 TanStack Query로 만들어줘. 낙관적 업데이트(optimistic update) 포함.',
+          ],
+        },
+        {
+          id: 'p3s3', title: '페이지 구현', qa: false,
+          files: ['src/pages', 'src/router.tsx'],
+          templates: [],
+          prompts: [
+            'React Router v6로 라우팅을 설정해줘. Protected Route, 404 페이지, 레이아웃 중첩 포함.',
+            '페이지목록.md 기반으로 각 페이지를 구현해줘. 로딩/에러/빈 상태 처리 포함.',
+          ],
+        },
+      ],
+      qc: {
+        title: '프론트엔드 QC',
+        checks: [
+          'TypeScript 타입 오류가 없는가?',
+          '단위 테스트가 주요 컴포넌트에 작성되었는가?',
+          '로딩/에러/빈 상태가 모두 처리되었는가?',
+          'API 오류가 사용자에게 적절히 표시되는가?',
+        ],
+        prompt: '프론트엔드 코드를 검토해줘. TypeScript 오류, 테스트 누락, 에러 처리 누락, 성능 문제를 찾아줘.',
+      },
+      log: {
+        file: 'docs/sprint-log.md',
+        items: ['구현된 컴포넌트/페이지 목록', '테스트 커버리지'],
+        prompt: 'sprint-log.md에 프론트엔드 단계 기록을 추가해줘.',
+      },
+      git: {
+        branch: 'feat/프론트-스프린트1',
+        pr: 'develop',
+        commands: [
+          'git checkout -b feat/프론트-스프린트1',
+          'git add src/',
+          'git commit -m "feat: 프론트엔드 컴포넌트, 페이지 구현 및 단위 테스트 추가"',
+          'git push origin feat/프론트-스프린트1',
+        ],
+      },
+    };
+    phase4 = {
+      id: 4, name: '백엔드', sub: 'FastAPI + SQLAlchemy + 인증 구현',
+      color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0',
+      steps: [
+        {
+          id: 'p4s0', title: 'FastAPI 초기화', qa: true,
+          files: ['backend/main.py', 'backend/requirements.txt'],
+          templates: [],
+          prompts: [
+            'FastAPI 프로젝트를 초기화해줘. CORS(허용 도메인), 공통 에러 핸들러, .env 환경변수 관리, uvicorn 실행 스크립트.',
+            'pytest + httpx로 테스트 환경을 설정해줘. SQLite 테스트 DB, conftest.py, 픽스처 설정.',
+          ],
+        },
+        {
+          id: 'p4s1', title: 'DB 설계 & SQLAlchemy', qa: false,
+          files: ['backend/models', 'backend/alembic.ini'],
+          templates: [],
+          prompts: [
+            '요구사항.md 기반으로 SQLAlchemy 모델을 설계해줘. relationship, 인덱스, created_at/updated_at 포함.',
+            'Alembic으로 DB 마이그레이션을 설정하고 초기 마이그레이션 파일을 생성해줘.',
+          ],
+        },
+        {
+          id: 'p4s2', title: '인증 구현 + 테스트', qa: true,
+          files: ['backend/routes/auth.py', 'backend/core/security.py'],
+          templates: [],
+          prompts: [
+            'JWT 인증을 구현해줘. 회원가입(bcrypt), 로그인(access+refresh token), 토큰 갱신, OAuth2PasswordBearer.',
+            'pytest로 인증 API 테스트를 작성해줘. 회원가입/로그인 성공·실패, 토큰 갱신, 미들웨어 케이스.',
+          ],
+        },
+        {
+          id: 'p4s3', title: 'API 구현 + 테스트', qa: true,
+          files: ['backend/routes', 'backend/services', 'backend/schemas'],
+          templates: [],
+          prompts: [
+            'Pydantic 스키마 + Router → Service → Repository 구조로 CRUD API를 구현해줘.',
+            'pytest + httpx로 CRUD API 테스트를 작성해줘. 성공/실패/권한 없음 케이스.',
+          ],
+        },
+        {
+          id: 'p4s4', title: 'Docker & CI/CD', qa: true,
+          files: ['Dockerfile', 'docker-compose.yml', '.github/workflows/ci.yml'],
+          templates: [],
+          prompts: [
+            'FastAPI와 React 각각의 Dockerfile을 멀티스테이지 빌드로 만들고 docker-compose.yml로 함께 실행해줘.',
+            'ci.yml을 만들어줘. PR마다 mypy → pytest → React 빌드+테스트가 자동 실행되도록.',
+          ],
+        },
+      ],
+      qc: {
+        title: '백엔드 QC',
+        checks: [
+          'API에 인증 미들웨어가 적용되었는가?',
+          'Pydantic으로 입력값 검증이 되는가?',
+          'pytest 테스트가 주요 API에 작성되었는가?',
+          '민감정보가 하드코딩되지 않았는가?',
+        ],
+        prompt: '백엔드 코드를 검토해줘. 인증 누락, 검증 누락, SQL Injection, 하드코딩 민감정보, 테스트 누락을 찾아줘.',
+      },
+      log: {
+        file: 'docs/sprint-log.md',
+        items: ['구현된 API 목록', '테스트 커버리지', '보안 처리 내용'],
+        prompt: 'sprint-log.md에 백엔드 단계 기록을 추가해줘.',
+      },
+      git: {
+        branch: 'feat/백엔드-스프린트1',
+        pr: 'develop',
+        commands: [
+          'git checkout -b feat/백엔드-스프린트1',
+          'git add backend/ .github/',
+          'git commit -m "feat: FastAPI 백엔드 구현, 단위 테스트, CI/CD 추가"',
+          'git push origin feat/백엔드-스프린트1',
+        ],
+      },
+    };
+  }
+
+  return {
+    project,
+    phases: base.phases.map(ph => {
+      if (ph.id === 3) return phase3;
+      if (ph.id === 4) return phase4;
+      return ph;
+    }),
+  };
+}
+
 // ─── Commands ────────────────────────────────────────────────────────────────
 
-function cmdInit() {
-  let created = [];
-
-  if (!fs.existsSync(USER_WORKFLOW)) {
-    fs.mkdirSync(USER_WORKFLOW, { recursive: true });
-    created.push('.workflow/');
-  }
-
-  if (!fs.existsSync(CONFIG_PATH)) {
-    console.error(c('red', '❌ .workflow/config.json not found.'));
-    console.error(c('yellow', '   Please ensure the kit is complete (config.json should exist in .workflow/).'));
-    process.exit(1);
-  }
-
-  if (!fs.existsSync(STATE_PATH)) {
+async function cmdInit() {
+  // 이미 초기화된 경우: sync만 실행
+  if (fs.existsSync(STATE_PATH)) {
+    console.log();
+    console.log(c('yellow', 'ℹ  이미 초기화된 프로젝트입니다. 상태 파일을 동기화합니다.'));
     const config = loadConfig();
-    const initialState = {
-      project: {
-        name: config.project?.name || '',
-        description: config.project?.description || '',
-        sprint: config.project?.sprint || 1,
-      },
-      completedSteps: [],
-      updatedAt: new Date().toISOString(),
-    };
-    fs.writeFileSync(STATE_PATH, JSON.stringify(initialState, null, 2));
-    created.push('.workflow/state.json');
-  } else {
-    console.log(c('yellow', 'ℹ  .workflow/state.json already exists — skipping'));
+    const state = loadState();
+    syncFiles(config, state);
+    try { injectToClaude(config, state); } catch {}
+    console.log(c('green', '✓ sync 완료 (status.md, state.js, CLAUDE.md 업데이트)'));
+    console.log(c('gray', '  node kit/cli.mjs status  — 현재 상태 확인'));
+    console.log();
+    return;
   }
 
-  const config = loadConfig();
-  const state = loadState();
-  syncFiles(config, state);
-  created.push('.workflow/status.md', '.workflow/state.js');
+  console.log();
+  console.log(bold('🚀 claude-code-kit 초기화'));
+  console.log(c('gray', '  새 프로젝트를 설정합니다.\n'));
 
+  // 1. 프로젝트 정보 입력
+  const projectName = await promptQuestion('프로젝트 이름');
+  const projectDesc = await promptQuestion('프로젝트 설명', '');
+  const sprintRaw   = await promptQuestion('스프린트 번호', '1');
+  const sprint      = parseInt(sprintRaw, 10) || 1;
+
+  // 2. 기술 스택 선택
   console.log();
-  created.forEach(f => console.log(c('green', `✓ Created: ${f}`)));
+  const stackIdx = await promptSelect('기술 스택을 선택하세요:', [
+    { label: 'Next.js + Express',   desc: 'Next.js 15 (App Router) + Express + Prisma + PostgreSQL' },
+    { label: 'Next.js 풀스택',      desc: 'Next.js 15 (App Router + API Routes) — Vercel 친화적' },
+    { label: 'React + FastAPI',      desc: 'React (Vite) + Python FastAPI + SQLAlchemy' },
+    { label: '커스텀',               desc: '기본 템플릿 (프롬프트 직접 설정)' },
+  ]);
+  const stackKey = ['nextjs-express', 'nextjs-fullstack', 'react-fastapi', 'custom'][stackIdx];
+
+  // 3. config.json 생성 (USER_WORKFLOW — 업데이트해도 덮어써지지 않음)
   console.log();
-  console.log(bold('워크플로우 초기화 완료!'));
-  console.log(c('gray', `  node kit/cli.mjs status    — 현재 상태 확인`));
-  console.log(c('gray', `  node kit/cli.mjs next      — 다음 할 일 확인`));
-  console.log(c('gray', `  node kit/cli.mjs list      — 전체 목록 확인`));
+  if (!fs.existsSync(USER_WORKFLOW)) fs.mkdirSync(USER_WORKFLOW, { recursive: true });
+  const config = generateConfig(projectName, projectDesc, sprint, stackKey);
+  fs.writeFileSync(USER_CONFIG_PATH, JSON.stringify(config, null, 2));
+
+  // 4. state.json 생성
+  const initialState = {
+    project: { name: projectName, description: projectDesc, sprint },
+    completedSteps: [],
+    updatedAt: new Date().toISOString(),
+  };
+  fs.writeFileSync(STATE_PATH, JSON.stringify(initialState, null, 2));
+
+  // 5. status.md, state.js 생성
+  syncFiles(config, initialState);
+
+  // 6. CLAUDE.md에 다음 할 일 주입
+  try { injectToClaude(config, initialState); } catch {}
+
+  console.log(c('green', '✓ 초기화 완료!'));
+  console.log();
+  console.log(c('gray', '  생성된 파일:'));
+  console.log(c('gray', '    .workflow/config.json  — 워크플로우 설정 (' + stackKey + ')'));
+  console.log(c('gray', '    .workflow/state.json   — 진행 상태'));
+  console.log(c('gray', '    .workflow/status.md    — 진행 요약'));
+  console.log(c('gray', '    CLAUDE.md              — 다음 할 일 주입됨'));
+  console.log();
+  console.log(bold('다음:'));
+  console.log(c('gray', '  node kit/cli.mjs next    — 다음 할 일 확인'));
+  console.log(c('gray', '  node kit/cli.mjs status  — 전체 진행 상태'));
+  console.log();
 }
 
 function cmdStatus() {
@@ -706,7 +1053,7 @@ async function cmdImportFromClaude(targetDir) {
 
 async function cmdUpdate() {
   console.log();
-  console.log(bold('🔄 claude-commin-kit 업데이트'));
+  console.log(bold('🔄 claude-code-kit 업데이트'));
   console.log();
 
   // 현재 버전 확인
@@ -753,11 +1100,11 @@ async function cmdUpdate() {
   console.log(c('cyan', '설치 방식 감지:'));
   if (isNpx) {
     console.log(`  ${c('yellow', 'npx 모드')} — 다음 실행 시 자동으로 최신 버전을 사용합니다.`);
-    console.log(c('gray', '  npx claude-commin-kit@latest <command>'));
+    console.log(c('gray', '  npx claude-code-kit@latest <command>'));
   } else if (isNpmGlobal) {
     console.log(`  ${c('cyan', 'npm 설치')} — 다음 명령으로 업데이트하세요:`);
-    console.log(c('gray', '  npm install -g claude-commin-kit@latest'));
-    console.log(c('gray', '  # 또는 로컬: npm install claude-commin-kit@latest'));
+    console.log(c('gray', '  npm install -g claude-code-kit@latest'));
+    console.log(c('gray', '  # 또는 로컬: npm install claude-code-kit@latest'));
   } else if (isGitSubmodule) {
     console.log(`  ${c('magenta', 'git submodule')} — 다음 명령으로 업데이트하세요:`);
     console.log(c('gray', `  git submodule update --remote ${path.relative(ROOT, KIT_ROOT)}`));
@@ -783,7 +1130,61 @@ function cmdSync() {
   const config = loadConfig();
   const state = loadState();
   syncFiles(config, state);
-  console.log(c('green', '✓ status.md, state.js 재생성 완료'));
+  try { injectToClaude(config, state); } catch {}
+  console.log(c('green', '✓ status.md, state.js, CLAUDE.md 재생성 완료'));
+}
+
+// ─── CLAUDE.md Injector ───────────────────────────────────────────────────────
+
+function injectToClaude(config, state) {
+  const START = '<!-- claude-code-kit:start -->';
+  const END   = '<!-- claude-code-kit:end -->';
+
+  const all  = getAllSteps(config);
+  const done = (state.completedSteps || []).length;
+  const pct  = all.length ? Math.round(done / all.length * 100) : 0;
+  const next = all.find(s => !(state.completedSteps || []).includes(s.id));
+
+  let section;
+  if (!next) {
+    section = `${START}\n## 워크플로우 완료! 🎉\n\n모든 단계 완료 (${done}/${all.length})\n${END}`;
+  } else {
+    const ph     = config.phases.find(p => p.id === next.phaseId);
+    const phDone = ph.steps.filter(s => (state.completedSteps || []).includes(s.id)).length;
+
+    let s = `${START}\n`;
+    s += `## 다음 할 일 (claude-code-kit)\n\n`;
+    s += `**\`${next.id}\`** ${next.title}${next.qa ? ' ★QA' : ''}\n`;
+    s += `Phase ${ph.id} — ${ph.name} (${phDone}/${ph.steps.length}) | 전체 ${pct}%\n\n`;
+
+    if (next.files && next.files.length) {
+      s += `**생성할 파일:** ${next.files.map(f => `\`${f}\``).join(', ')}\n\n`;
+    }
+
+    if (next.prompts && next.prompts.length) {
+      next.prompts.forEach((p, i) => {
+        s += `### 프롬프트 [${i + 1}/${next.prompts.length}]\n${p}\n\n`;
+      });
+    }
+
+    s += `---\n*완료 후: \`node kit/cli.mjs complete ${next.id}\`*\n`;
+    s += END;
+    section = s;
+  }
+
+  let content = fs.existsSync(CLAUDE_MD_PATH)
+    ? fs.readFileSync(CLAUDE_MD_PATH, 'utf8')
+    : '';
+
+  if (content.includes(START)) {
+    const si = content.indexOf(START);
+    const ei = content.indexOf(END) + END.length;
+    content = content.slice(0, si).trimEnd() + '\n\n' + section + '\n' + content.slice(ei).trimStart();
+  } else {
+    content = (content.trimEnd() ? content.trimEnd() + '\n\n' : '') + section + '\n';
+  }
+
+  fs.writeFileSync(CLAUDE_MD_PATH, content);
 }
 
 async function cmdReset() {
@@ -811,7 +1212,7 @@ async function cmdReset() {
 
 function cmdHelp() {
   console.log();
-  console.log(bold('⚡ claude-commin-kit CLI'));
+  console.log(bold('⚡ claude-code-kit CLI'));
   console.log(c('gray', '  워크플로우 에이전트 시스템'));
   console.log();
   console.log(bold('명령어:'));
