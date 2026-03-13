@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚡ Claude Code 작업 순서 v5</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#f8fafc;color:#1e293b;min-height:100vh}
+.wrap{max-width:700px;margin:0 auto;padding:24px 16px}
+.header{text-align:center;margin-bottom:28px}
+.header h1{font-size:22px;font-weight:800;color:#1e293b}
+.header p{color:#64748b;font-size:14px;margin-top:6px}
+.flow{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px;margin-top:14px}
+.flow-item{background:#e2e8f0;border-radius:6px;padding:3px 10px;font-size:12px;color:#475569;font-weight:600}
+.flow-arrow{color:#94a3b8;font-size:12px}
+.legend{display:flex;justify-content:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+.legend-item{border-radius:6px;padding:2px 10px;font-size:11px;font-weight:600}
+.progress-wrap{background:#e2e8f0;border-radius:999px;height:10px;margin:16px 0 4px;overflow:hidden}
+.progress-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#6366f1,#0ea5e9);transition:width .4s}
+.progress-label{font-size:13px;color:#475569;text-align:center;margin-bottom:20px}
+
+.phase{border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);margin-bottom:14px;border:1.5px solid #e2e8f0;background:#fff;transition:border .2s}
+.phase.active{border-color:var(--c)}
+.phase-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;cursor:pointer;transition:background .2s}
+.phase-head-left{display:flex;align-items:center;gap:12px}
+.phase-num{width:28px;height:28px;border-radius:50%;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.phase-name{font-weight:700;font-size:15px;color:#1e293b}
+.phase-sub{font-size:12px;color:#64748b}
+.phase-arrow{font-size:18px;color:#94a3b8;transition:transform .2s}
+.phase-body{display:none;padding:8px 16px 16px}
+.phase-body.open{display:block}
+
+.step{border-radius:10px;overflow:hidden;margin-bottom:8px;border:1px solid #f1f5f9;background:#fff}
+.step.qa{border-color:#fde047;background:#fefce8}
+.step-head{display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer}
+.step-num{color:#fff;border-radius:4px;padding:1px 7px;font-size:11px;font-weight:700;flex-shrink:0}
+.step-label{flex:1;font-size:13px;font-weight:600;color:#1e293b}
+.step-arrow{font-size:14px;color:#94a3b8;transition:transform .2s;flex-shrink:0}
+.step-body{display:none;padding:12px 14px;border-top:1px solid #f1f5f9}
+.step.qa .step-body{border-top-color:#fde047}
+
+.files{margin-bottom:14px}
+.files-title{font-size:12px;font-weight:700;color:#475569;margin-bottom:8px}
+.file-tags{display:flex;flex-wrap:wrap;gap:6px}
+.file-tag{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;padding:3px 8px;font-size:12px;color:#334155;font-family:monospace}
+
+.prompts-title{font-size:12px;font-weight:700;color:#475569;margin-bottom:8px}
+.prompt-block{background:#1e293b;border-radius:8px;padding:10px 12px;margin-bottom:8px;position:relative}
+.prompt-text{color:#e2e8f0;font-size:12px;line-height:1.7;padding-right:64px;white-space:pre-wrap}
+.copy-btn{position:absolute;top:8px;right:8px;background:#334155;color:#fff;border:none;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;transition:background .2s}
+.copy-btn.done{background:#10b981}
+
+.section{margin-top:8px;border-radius:10px;overflow:hidden}
+.section-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer}
+.section-badge{color:#fff;border-radius:4px;padding:1px 7px;font-size:11px;font-weight:700}
+.section-title{font-weight:700;font-size:14px}
+.section-body{display:none;padding:12px 14px}
+
+.qc-section{border:2px solid var(--c)}
+.qc-head{background:var(--bg)}
+.checklist-item{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #f1f5f9;cursor:pointer}
+.checkbox{width:20px;height:20px;border-radius:5px;border:2px solid #cbd5e1;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.checkbox.checked{border-color:var(--c);background:var(--c)}
+.checkbox-tick{color:#fff;font-size:12px}
+.check-label{font-size:13px;color:#334155;transition:all .15s}
+.check-label.checked{text-decoration:line-through;color:#94a3b8}
+
+.log-section{border:2px solid #f59e0b}
+.log-head{background:#fffbeb}
+.log-items{background:#f1f5f9;border-radius:8px;padding:10px 12px;margin-bottom:12px}
+.log-file{font-size:12px;color:#475569;font-family:monospace;margin-bottom:8px}
+.log-item{font-size:13px;color:#475569;padding:3px 0;display:flex;gap:6px}
+
+.git-section{border:2px solid #334155}
+.git-head{background:#f8fafc}
+.git-code{background:#0f172a;border-radius:8px;padding:12px 14px}
+.git-line{font-family:monospace;font-size:12px;line-height:1.8}
+.git-line.comment{color:#64748b}
+.git-line.cmd{color:#86efac}
+.git-copy{margin-top:10px;background:#334155;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;cursor:pointer;transition:background .2s}
+.git-copy.done{background:#10b981}
+
+.tip{margin-top:20px;background:#fef3c7;border:1px solid #fde68a;border-radius:10px;padding:12px 16px;font-size:13px;color:#92400e}
+
+.reset-btn{display:block;margin:12px auto 0;background:#fee2e2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:6px 16px;font-size:12px;font-weight:600;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <h1>⚡ Claude Code 작업 순서 v5</h1>
+    <p>프롬프트 예시 + Git + QC + 진행기록 완전판</p>
+    <div class="flow" id="flow"></div>
+    <div class="legend">
+      <span class="legend-item" style="background:#fef9c3;border:1px solid #fde047;color:#854d0e">★ QA 점수 보강 항목</span>
+      <span class="legend-item" style="background:#1e293b;color:#86efac">💬 복사 가능한 프롬프트</span>
+    </div>
+    <div class="progress-wrap"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+    <div class="progress-label" id="progress-label">전체 진도 0% (0 / 0 완료)</div>
+    <button class="reset-btn" onclick="resetAll()">🔄 전체 초기화</button>
+  </div>
+  <div id="phases-container"></div>
+  <div class="tip">💡 <strong>각 단계 완료 순서:</strong> STEP 완료 → 프롬프트 복사해서 실행 → LOG 기록 → QC 체크 → GIT 커밋 → PR → 다음 단계</div>
+</div>
+
+<script>
+const PHASES = [
+  {id:0,name:"🚀 Git & 스프린트 초기화",sub:"저장소 & GitHub Projects 세팅",color:"#0f172a",bg:"#f1f5f9",border:"#cbd5e1",
+   steps:[
+    {title:"Git 저장소 초기화",files:[".gitignore",".github/pull_request_template.md",".github/ISSUE_TEMPLATE/feature.md"],
+     prompts:["Next.js + Node.js 프로젝트에 맞는 .gitignore 파일을 만들어줘. node_modules, .env, .next, dist 등 포함.","GitHub PR 템플릿을 만들어줘. 작업 내용 요약, 변경 유형 체크박스(feat/fix/docs/refactor), 테스트 여부, 스크린샷 섹션 포함.","GitHub Issue 템플릿 두 가지를 만들어줘. 하나는 기능 요청(feature request), 하나는 버그 리포트(bug report) 형식으로."]},
+    {title:"브랜치 전략 설정",files:["docs/브랜치전략.md"],
+     prompts:["Git 브랜치 전략을 docs/브랜치전략.md로 정리해줘.\n- main: 배포용 (직접 push 금지)\n- develop: 통합 브랜치\n- feat/기획-스프린트N, feat/디자인-스프린트N\n커밋 메시지 컨벤션(feat/fix/docs/chore)도 포함해줘."]},
+    {title:"GitHub Projects 스프린트 구성",files:[],
+     prompts:["GitHub Projects 칸반 보드 구성 방법을 안내해줘. 컬럼은 Backlog / In Progress / In Review / QC / Done으로 설정하고 각 용도를 설명해줘.","스프린트 1 이슈 목록 초안을 요구사항.md 기반으로 작성해줘. 기획/디자인/프론트/백엔드 라벨로 분류하고 예상 소요 시간도 포함해줘."]}
+   ]},
+  {id:1,name:"📋 기획",sub:"프로젝트의 뼈대를 잡는 단계",color:"#8b5cf6",bg:"#f5f3ff",border:"#ddd6fe",
+   steps:[
+    {title:"프로젝트 초기 설정",files:["README.md","CLAUDE.md"],
+     prompts:["이 프로젝트는 [서비스 설명]야. README.md를 작성해줘. 프로젝트 개요, 주요 기능, 기술 스택, 로컬 실행 방법, 환경변수 설명을 포함해줘.","CLAUDE.md를 작성해줘. 아래 내용을 포함해줘:\n- 프로젝트 개요 및 목적\n- 사용 기술 스택\n- 폴더 구조 설명\n- 코딩 컨벤션 (네이밍, 파일 구조)\n- 절대 하면 안 되는 것 (금지 사항)\n- PR/커밋 규칙"]},
+    {title:"요구사항 & 차별화 정의 ★",qa:true,files:["docs/요구사항.md","docs/유저스토리.md","docs/차별화.md"],
+     prompts:["요구사항.md를 작성해줘. Must Have / Should Have / Nice to Have 세 단계로 우선순위 분류하고, MVP 범위와 제외 범위도 명시해줘.","유저스토리.md를 작성해줘. 'As a [사용자], I want to [행동], So that [목적]' 형식으로, 수용 기준(Acceptance Criteria)도 함께 작성해줘.","차별화.md를 작성해줘. 다음 세 가지를 명확히 서술해줘:\n1. 해결하려는 문제의 실재성\n2. 기존 솔루션의 한계\n3. 우리 서비스만의 강점"]},
+    {title:"기술 스택 선택 근거 문서화 ★",qa:true,files:["docs/기술스택.md","docs/폴더구조.md"],
+     prompts:["기술스택.md를 작성해줘. 각 기술마다 선택 이유, 대안과의 비교, 팀 역량 적합성을 포함해줘. 프론트/백엔드/DB/인프라 카테고리로 분류해줘.","기술스택.md를 기반으로 폴더구조.md를 작성해줘. 실제 디렉토리 트리 형태로 보여주고 각 폴더 역할을 한 줄씩 설명해줘."]}
+   ],
+   qc:{title:"📋 기획 QC",checks:["요구사항에 누락된 핵심 기능은 없는가?","유저스토리가 실제 사용자 관점으로 작성되었는가?","기술 스택 선택 근거가 문서에 명확히 서술되었는가?","차별화.md에 기존 솔루션 대비 강점이 명시되었는가?","CLAUDE.md에 코딩 규칙이 명확히 정의되었는가?"],
+    prompt:"요구사항.md, 유저스토리.md, 기술스택.md, 차별화.md를 전체적으로 검토해줘. 누락된 항목, 모순된 내용, 선택 근거가 불명확한 부분, 차별화 포인트가 약한 부분을 항목별로 지적해줘."},
+   log:{file:"docs/sprint-log.md",items:["요구사항 확정 여부 및 변경 내용","기술 스택 결정 이유 및 논의 과정","차별화 포인트 도출 배경"],
+    prompt:"sprint-log.md에 기획 단계 진행 기록을 추가해줘. 오늘 날짜와 함께 확정된 요구사항, 기술 스택 결정 이유, 주요 논의 사항, 다음 단계 액션 아이템을 포함해줘."},
+   git:{branch:"feat/기획-스프린트1",pr:"develop",commands:["git checkout -b feat/기획-스프린트1","git add docs/ README.md CLAUDE.md","git commit -m \"docs: 기획 문서 작성 (요구사항, 유저스토리, 기술스택, 차별화)\"","git push origin feat/기획-스프린트1","# GitHub에서 develop으로 PR 생성 → QC 통과 후 머지"]}},
+  {id:2,name:"🎨 디자인",sub:"UI 규칙과 컴포넌트 설계 단계",color:"#ec4899",bg:"#fdf2f8",border:"#fbcfe8",
+   steps:[
+    {title:"디자인 시스템 정의",files:["docs/디자인.md"],
+     prompts:["디자인 룰을 디자인.md로 작성해줘. 컬러 시스템, 타이포그래피, 간격 시스템(4px 단위), 컴포넌트 규칙(버튼/인풋/카드/모달), 금지 사항을 포함해줘."]},
+    {title:"컴포넌트 설계",files:["docs/컴포넌트목록.md"],
+     prompts:["디자인.md를 기반으로 컴포넌트목록.md를 작성해줘. 각 컴포넌트마다 props와 타입, variant, 상태(default/hover/focus/disabled/loading), 사용 예시를 포함해줘."]},
+    {title:"페이지 & 사용자 흐름 설계 ★",qa:true,files:["docs/페이지목록.md","docs/사용자흐름.md"],
+     prompts:["유저스토리.md를 기반으로 페이지목록.md를 작성해줘. 각 페이지마다 URL, 레이아웃 구성, 필요한 컴포넌트, 인증 필요 여부를 정리해줘.","사용자흐름.md를 작성해줘. 핵심 시나리오 3가지를 단계별로 서술해줘:\n1. 신규 사용자 온보딩\n2. 핵심 기능 사용 흐름\n3. 오류 상황 대응 흐름"]}
+   ],
+   qc:{title:"🎨 디자인 QC",checks:["컬러 대비가 WCAG AA 기준(4.5:1)을 충족하는가?","모든 컴포넌트에 disabled, hover, focus 상태가 정의되었는가?","모바일/태블릿/데스크탑 반응형이 고려되었는가?","사용자 흐름 시나리오가 유저스토리와 일치하는가?","디자인 시스템에 일관성이 있는가?"],
+    prompt:"디자인.md, 컴포넌트목록.md, 사용자흐름.md를 검토해줘. 접근성 기준 미달, 누락된 컴포넌트 상태, UX 흐름의 어색한 부분, 디자인 일관성 문제를 구체적으로 지적해줘."},
+   log:{file:"docs/sprint-log.md",items:["디자인 시스템 주요 결정 사항","컴포넌트 설계 변경 내용","사용자 흐름 검토 결과"],
+    prompt:"sprint-log.md에 디자인 단계 진행 기록을 추가해줘. 오늘 날짜와 함께 디자인 시스템 결정 사항, 컴포넌트 변경 이유, 사용자 흐름 논의 내용, 다음 단계 액션 아이템을 포함해줘."},
+   git:{branch:"feat/디자인-스프린트1",pr:"develop",commands:["git checkout -b feat/디자인-스프린트1","git add docs/디자인.md docs/컴포넌트목록.md docs/페이지목록.md docs/사용자흐름.md","git commit -m \"docs: 디자인 시스템, 컴포넌트 설계, 사용자 흐름 문서 추가\"","git push origin feat/디자인-스프린트1","# GitHub에서 develop으로 PR 생성 → QC 통과 후 머지"]}},
+  {id:3,name:"🖥️ 프론트엔드",sub:"실제 화면 구현 단계",color:"#0ea5e9",bg:"#f0f9ff",border:"#bae6fd",
+   steps:[
+    {title:"프로젝트 초기화 & Jest 테스트 환경 설정 ★",qa:true,files:["package.json","tsconfig.json","tailwind.config.ts",".env.local","jest.config.ts","jest.setup.ts"],
+     prompts:["Next.js 15 + TypeScript + Tailwind CSS 프로젝트를 세팅해줘. 폴더구조.md 기반으로 초기 디렉토리 구조도 함께 만들어줘. App Router 방식으로 설정해줘.","Jest + React Testing Library를 설치하고 설정해줘. Next.js 환경 설정, 절대 경로 alias, 커버리지 수집 옵션을 포함해줘.","package.json에 다음 스크립트를 추가해줘:\n- dev, build, start, lint\n- test, test:watch, test:coverage\n- type-check (tsc --noEmit)"]},
+    {title:"공통 컴포넌트 생성 + 단위 테스트 ★",qa:true,files:["components/ui/Button.tsx","components/ui/Input.tsx","components/ui/Card.tsx","components/ui/Modal.tsx","components/ui/__tests__/Button.test.tsx","components/ui/__tests__/Input.test.tsx"],
+     prompts:["Button 컴포넌트를 TypeScript로 만들어줘. variant(primary/secondary/ghost/danger), size(sm/md/lg), disabled, loading 상태를 포함하고, CVA로 스타일을 관리해줘.","Button 컴포넌트 단위 테스트를 Jest + RTL로 작성해줘. 각 variant 렌더링, 클릭 이벤트, disabled 상태 클릭 차단, loading 표시, 접근성(aria)을 테스트해줘.","Input, Card, Modal 컴포넌트와 각각의 테스트 파일을 순서대로 만들어줘. 디자인.md 규칙을 반드시 준수해줘."]},
+    {title:"레이아웃 구성",files:["components/layout/Header.tsx","components/layout/Footer.tsx","components/layout/Sidebar.tsx","app/layout.tsx"],
+     prompts:["페이지목록.md와 사용자흐름.md를 참고해서 공통 Header, Footer, Sidebar를 만들어줘. 반응형 처리와 모바일 햄버거 메뉴도 포함해줘.","app/layout.tsx에 공통 레이아웃을 적용해줘. 메타데이터 설정, 폰트 최적화(next/font), ThemeProvider 설정도 포함해줘."]},
+    {title:"페이지 구현",files:["app/page.tsx","app/[feature]/page.tsx","app/[feature]/[id]/page.tsx"],
+     prompts:["페이지목록.md와 사용자흐름.md를 기반으로 [페이지명] 페이지를 구현해줘. 공통 컴포넌트를 활용하고, loading.tsx / error.tsx / not-found.tsx도 함께 만들어줘.","각 페이지에 Suspense를 활용한 스켈레톤 로딩, 빈 상태(empty state), 에러 상태 UI를 추가해줘."]},
+    {title:"API 연동 & 상태관리 + 훅 테스트 ★",qa:true,files:["lib/api.ts","hooks/use[Feature].ts","store/[feature]Store.ts","hooks/__tests__/use[Feature].test.ts"],
+     prompts:["공통 api.ts 유틸을 만들어줘. fetch 래퍼(GET/POST/PUT/DELETE), JWT 토큰 자동 첨부, 401 응답 시 자동 갱신 or 로그아웃, 공통 에러 타입, 타임아웃 처리를 포함해줘.","[기능명] 커스텀 훅을 만들어줘. SWR 또는 TanStack Query를 사용하고, 낙관적 업데이트(optimistic update)도 포함해줘.","커스텀 훅 단위 테스트를 작성해줘. MSW로 API를 모킹해서 성공/실패/로딩 상태를 모두 테스트해줘."]}
+   ],
+   qc:{title:"🖥️ 프론트엔드 QC",checks:["모든 컴포넌트가 디자인.md 규칙을 준수하는가?","TypeScript 타입 오류가 없는가? (tsc --noEmit 통과)","단위 테스트가 주요 컴포넌트와 훅에 작성되었는가?","로딩 / 에러 / 빈 상태(empty state)가 모두 처리되었는가?","반응형 레이아웃이 모바일(360px)에서 정상 동작하는가?","console.error, 불필요한 console.log가 없는가?"],
+    prompt:"프론트엔드 코드 전체를 검토해줘. TypeScript 타입 오류, 누락된 에러/로딩 처리, 디자인.md 규칙 위반, 테스트 누락, 성능 문제(불필요한 리렌더링), 접근성 문제를 항목별로 찾아줘."},
+   log:{file:"docs/sprint-log.md",items:["구현된 컴포넌트 및 페이지 목록","테스트 커버리지 현황","디자인과 다르게 구현된 부분 및 이유"],
+    prompt:"sprint-log.md에 프론트엔드 단계 진행 기록을 추가해줘. 오늘 날짜와 함께 구현된 컴포넌트/페이지 목록, 테스트 커버리지 수치, 디자인 변경 사항, 기술적 결정 사항, 다음 단계 액션 아이템을 포함해줘."},
+   git:{branch:"feat/프론트-스프린트1",pr:"develop",commands:["git checkout -b feat/프론트-스프린트1","git add components/ app/ hooks/ lib/ store/ jest.config.ts jest.setup.ts","git commit -m \"feat: 프론트엔드 컴포넌트, 페이지 구현 및 단위 테스트 추가\"","git push origin feat/프론트-스프린트1","# GitHub에서 develop으로 PR 생성 → CI 자동 테스트 통과 → QC → 머지"]}},
+  {id:4,name:"⚙️ 백엔드",sub:"서버 & 데이터 구현 단계",color:"#10b981",bg:"#f0fdf4",border:"#bbf7d0",
+   steps:[
+    {title:"서버 초기화 & Jest 테스트 환경 설정 ★",qa:true,files:["server/index.ts","server/.env","server/.env.test","server/package.json","server/jest.config.ts"],
+     prompts:["Node.js + Express + TypeScript 서버를 초기화해줘. cors(허용 도메인 화이트리스트), helmet, morgan, express-rate-limit, 공통 에러 핸들러 미들웨어를 설정해줘.","서버용 Jest 환경을 설정해줘. TypeScript 지원, .env.test 로드, 커버리지 설정을 포함하고 supertest도 함께 설치해줘."]},
+    {title:"DB 설계 & 연결",files:["server/prisma/schema.prisma","server/lib/db.ts"],
+     prompts:["요구사항.md와 유저스토리.md를 기반으로 Prisma schema를 설계해줘. 모델 관계(1:N, N:M), 인덱스, createdAt/updatedAt 자동 관리를 포함하고 설계 이유를 주석으로 남겨줘.","Prisma 클라이언트 초기화 코드를 싱글턴 패턴으로 작성해줘. 개발 환경에서 핫 리로드 시 연결 중복 방지."]},
+    {title:"인증 구현 + 단위 테스트 ★",qa:true,files:["server/routes/auth.ts","server/middleware/authenticate.ts","server/lib/jwt.ts","server/__tests__/auth.test.ts"],
+     prompts:["JWT 기반 인증을 구현해줘. 회원가입(bcrypt, 이메일 중복 체크), 로그인(accessToken+refreshToken), 토큰 갱신, 로그아웃(refreshToken 무효화), 비밀번호 재설정을 포함해줘.","인증 미들웨어를 만들어줘. accessToken 검증, 만료 처리, 권한 레벨(role) 체크 기능을 포함해줘.","인증 API 단위 테스트를 supertest로 작성해줘. 회원가입 성공/중복 실패, 로그인 성공/비밀번호 불일치, 토큰 갱신 성공/만료 실패, 미들웨어 통과/차단을 커버해줘."]},
+    {title:"API 라우터 구현 + 단위 테스트 ★",qa:true,files:["server/routes/[feature].ts","server/controllers/[feature]Controller.ts","server/services/[feature]Service.ts","server/__tests__/[feature].test.ts"],
+     prompts:["[기능명] CRUD API를 Controller(요청/응답) - Service(비즈니스 로직) 구조로 만들어줘. zod로 입력값 유효성 검사를 추가해줘.","커스텀 AppError 클래스를 만들고, 모든 에러가 { success: false, code: string, message: string } 형태로 응답되도록 통일해줘.","Prisma 클라이언트를 jest.mock으로 모킹해서 CRUD 성공/실패/엣지 케이스를 테스트해줘."]},
+    {title:"배포 & CI/CD 자동 테스트 설정 ★",qa:true,files:["Dockerfile","docker-compose.yml",".github/workflows/ci.yml",".github/workflows/deploy.yml"],
+     prompts:["Next.js와 Node.js 각각의 Dockerfile을 멀티스테이지 빌드로 만들어줘. 이미지 크기를 최소화하고 non-root 유저로 실행해줘.","docker-compose.yml을 만들어줘. 프론트엔드, 백엔드, PostgreSQL, Redis를 함께 실행하고 환경변수는 .env에서 읽도록 해줘.","ci.yml을 만들어줘. PR 생성 시 TypeScript 타입 체크 → ESLint → Jest 단위 테스트 + 커버리지 → 커버리지 80% 미만 PR 차단이 자동 실행되도록 해줘.","deploy.yml을 만들어줘. main 브랜치 머지 시 Docker 이미지 빌드 → 레지스트리 푸시 → 서버 배포가 자동 실행되도록 해줘."]}
+   ],
+   qc:{title:"⚙️ 백엔드 QC",checks:["모든 API 엔드포인트에 인증/권한 검사가 적용되었는가?","입력값 유효성 검사(zod)가 빠짐없이 적용되었는가?","단위 테스트가 주요 API와 서비스에 작성되었는가?","GitHub Actions CI에서 테스트가 자동 실행되는가?","환경변수(.env)에 민감정보가 하드코딩되지 않았는가?","에러 응답이 일관된 형식으로 반환되는가?"],
+    prompt:"백엔드 코드 전체를 검토해줘. 인증/권한 미적용 엔드포인트, 유효성 검사 누락, SQL Injection/XSS 취약점, 하드코딩된 민감 정보, 테스트 누락, N+1 쿼리 문제, 에러 응답 불일치를 항목별로 찾아줘."},
+   log:{file:"docs/sprint-log.md",items:["구현된 API 엔드포인트 목록","테스트 커버리지 현황","보안 이슈 발견 및 해결 내용"],
+    prompt:"sprint-log.md에 백엔드 단계 진행 기록을 추가해줘. 오늘 날짜와 함께 구현된 API 목록, 테스트 커버리지 수치, 보안 처리 내용, DB 설계 변경 사항, 다음 단계 액션 아이템을 포함해줘."},
+   git:{branch:"feat/백엔드-스프린트1",pr:"develop",commands:["git checkout -b feat/백엔드-스프린트1","git add server/ .github/workflows/","git commit -m \"feat: 백엔드 API 구현, 단위 테스트, CI/CD 자동화 추가\"","git push origin feat/백엔드-스프린트1","# GitHub에서 develop으로 PR 생성 → CI 자동 테스트 통과 → QC → 머지"]}},
+  {id:5,name:"🔀 스프린트 마무리",sub:"develop → main 머지 & 다음 스프린트 준비",color:"#f59e0b",bg:"#fffbeb",border:"#fde68a",
+   steps:[
+    {title:"E2E 통합 테스트 ★",qa:true,files:["e2e/[feature].spec.ts","playwright.config.ts"],
+     prompts:["Playwright를 설치하고 playwright.config.ts를 설정해줘. baseURL을 환경변수로 관리하고 로컬/CI 환경 모두 지원해줘.","사용자흐름.md 핵심 시나리오로 E2E 테스트를 작성해줘. 회원가입→로그인→핵심기능 사용, 오류 상황, 모바일 뷰포트(375px) 동일 흐름을 포함해줘.","ci.yml에 E2E 테스트 실행 단계를 추가해줘. 단위 테스트 통과 후에만 E2E가 실행되도록 순서를 설정해줘."]},
+    {title:"스프린트 회고 & 다음 계획 ★",qa:true,files:["docs/스프린트1-회고.md","docs/스프린트2-계획.md"],
+     prompts:["sprint-log.md를 종합해서 스프린트1-회고.md를 작성해줘. 완료/미완료 항목, Keep/Problem/Try, 최종 테스트 커버리지 요약, QA 평가 예상 점수를 포함해줘.","백로그와 회고를 바탕으로 스프린트2-계획.md를 작성해줘. 미완료 항목을 최우선으로 배치하고 GitHub Projects 이슈 목록 형태로 정리해줘."]}
+   ],
+   git:{branch:"develop",pr:"main",commands:["# 모든 포지션 PR이 develop에 머지 + CI 테스트 통과 후","git checkout develop && git pull origin develop","# E2E 테스트 완료 후","git checkout main","git merge develop","git tag -a v1.0.0-sprint1 -m \"스프린트1 완료\"","git push origin main --tags","# GitHub Projects: 완료 이슈 Done으로 이동"]}}
+];
+
+const SK = 'ccwf_v5';
+let state = JSON.parse(localStorage.getItem(SK) || '{"checks":{},"openPhases":{},"openSteps":{},"openSections":{}}');
+function save(){ localStorage.setItem(SK, JSON.stringify(state)); }
+
+function getTotals(){
+  let total=0, done=0;
+  PHASES.forEach(ph=>{
+    ph.steps.forEach((_,si)=>{ total++; if(state.checks[`${ph.id}-s-${si}`]) done++; });
+    if(ph.qc) ph.qc.checks.forEach((_,ci)=>{ total++; if(state.checks[`${ph.id}-qc-${ci}`]) done++; });
+  });
+  return {total,done,pct:total?Math.round(done/total*100):0};
+}
+
+function updateProgress(){
+  const {total,done,pct}=getTotals();
+  document.getElementById('progress-fill').style.width=pct+'%';
+  document.getElementById('progress-label').textContent=`전체 진도 ${pct}% (${done} / ${total} 완료)`;
+}
+
+function resetAll(){
+  if(!confirm('전체 진행 상태를 초기화할까요?')) return;
+  state={checks:{},openPhases:{},openSteps:{},openSections:{}};
+  save(); render();
+}
+
+function toggleCheck(key){
+  state.checks[key]=!state.checks[key];
+  save();
+  const box=document.getElementById('cb-'+key);
+  const lbl=document.getElementById('cl-'+key);
+  if(box){ box.className='checkbox'+(state.checks[key]?' checked':''); box.innerHTML=state.checks[key]?'<span class="checkbox-tick">✓</span>':''; }
+  if(lbl){ lbl.className='check-label'+(state.checks[key]?' checked':''); }
+  updateProgress();
+}
+
+function togglePhase(id){
+  state.openPhases[id]=!state.openPhases[id]; save();
+  const body=document.getElementById('pb-'+id);
+  const arrow=document.getElementById('pa-'+id);
+  const head=document.getElementById('ph-'+id);
+  const phase=PHASES.find(p=>p.id===id);
+  if(body) body.className='phase-body'+(state.openPhases[id]?' open':'');
+  if(arrow) arrow.style.transform=state.openPhases[id]?'rotate(180deg)':'none';
+  if(head) head.style.background=state.openPhases[id]?phase.bg:'#fff';
+}
+
+function toggleStep(key){
+  state.openSteps[key]=!state.openSteps[key]; save();
+  const body=document.getElementById('sb-'+key);
+  const arrow=document.getElementById('sa-'+key);
+  if(body) body.style.display=state.openSteps[key]?'block':'none';
+  if(arrow) arrow.style.transform=state.openSteps[key]?'rotate(180deg)':'none';
+}
+
+function toggleSection(key){
+  state.openSections[key]=!state.openSections[key]; save();
+  const body=document.getElementById('sec-'+key);
+  const arrow=document.getElementById('seca-'+key);
+  if(body) body.style.display=state.openSections[key]?'block':'none';
+  if(arrow) arrow.style.transform=state.openSections[key]?'rotate(180deg)':'none';
+}
+
+function copyPrompt(btn, text){
+  navigator.clipboard.writeText(text);
+  btn.textContent='✓ 복사됨'; btn.className='copy-btn done';
+  setTimeout(()=>{ btn.textContent='복사'; btn.className='copy-btn'; },1500);
+}
+
+function render(){
+  // flow
+  const flowItems=[{l:"🚀 초기화"},{l:"📋 기획"},{l:"🎨 디자인"},{l:"🖥️ 프론트"},{l:"⚙️ 백엔드"},{l:"🔀 마무리"}];
+  document.getElementById('flow').innerHTML=flowItems.map((f,i)=>`<span class="flow-item">${f.l}</span>${i<flowItems.length-1?'<span class="flow-arrow">→</span>':''}`).join('');
+
+  const container=document.getElementById('phases-container');
+  container.innerHTML=PHASES.map(ph=>{
+    const isOpen=!!state.openPhases[ph.id];
+    return `
+    <div class="phase${isOpen?' active':''}" style="--c:${ph.color};--bg:${ph.bg}">
+      <div class="phase-head" id="ph-${ph.id}" onclick="togglePhase(${ph.id})" style="background:${isOpen?ph.bg:'#fff'}">
+        <div class="phase-head-left">
+          <div class="phase-num" style="background:${ph.color}">${ph.id}</div>
+          <div><div class="phase-name">${ph.name}</div><div class="phase-sub">${ph.sub}</div></div>
+        </div>
+        <span class="phase-arrow" id="pa-${ph.id}" style="transform:${isOpen?'rotate(180deg)':'none'}">▾</span>
+      </div>
+      <div class="phase-body${isOpen?' open':''}" id="pb-${ph.id}">
+        ${ph.steps.map((s,si)=>{
+          const sk=`${ph.id}-s-${si}`;
+          const isStepOpen=!!state.openSteps[sk];
+          return `
+          <div class="step${s.qa?' qa':''}">
+            <div class="step-head" onclick="toggleStep('${sk}')">
+              <span class="step-num" style="background:${ph.color}">STEP ${si+1}</span>
+              <span class="step-label">${s.title}</span>
+              ${s.qa?'<span style="background:#6366f1;color:#fff;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700">★ QA</span>':''}
+              <span class="step-arrow" id="sa-${sk}" style="transform:${isStepOpen?'rotate(180deg)':'none'}">▾</span>
+            </div>
+            <div class="step-body" id="sb-${sk}" style="display:${isStepOpen?'block':'none'}">
+              ${s.files&&s.files.length?`<div class="files"><div class="files-title">📁 생성할 파일</div><div class="file-tags">${s.files.map(f=>`<span class="file-tag">${f}</span>`).join('')}</div></div>`:''}
+              <div class="prompts-title">💬 Claude Code 프롬프트 예시</div>
+              ${s.prompts.map((p,pi)=>`
+              <div class="prompt-block">
+                <div class="prompt-text">${p}</div>
+                <button class="copy-btn" onclick="copyPrompt(this,${JSON.stringify(p)})">복사</button>
+              </div>`).join('')}
+            </div>
+          </div>`;
+        }).join('')}
+
+        ${ph.qc?`
+        <div class="section qc-section" style="--c:${ph.color};--bg:${ph.bg}">
+          <div class="section-head qc-head" onclick="toggleSection('qc-${ph.id}')">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="section-badge" style="background:${ph.color}">QC</span>
+              <span class="section-title" style="color:${ph.color}">${ph.qc.title}</span>
+            </div>
+            <span class="step-arrow" id="seca-qc-${ph.id}" style="transform:${state.openSections['qc-'+ph.id]?'rotate(180deg)':'none'}">▾</span>
+          </div>
+          <div class="section-body" id="sec-qc-${ph.id}" style="display:${state.openSections['qc-'+ph.id]?'block':'none'}">
+            <div class="prompts-title">✅ 체크리스트</div>
+            ${ph.qc.checks.map((c,ci)=>{
+              const key=`${ph.id}-qc-${ci}`;
+              const chk=!!state.checks[key];
+              return `<div class="checklist-item" onclick="toggleCheck('${key}')">
+                <div class="checkbox${chk?' checked':''}" id="cb-${key}" style="--c:${ph.color}">${chk?'<span class="checkbox-tick">✓</span>':''}</div>
+                <span class="check-label${chk?' checked':''}" id="cl-${key}">${c}</span>
+              </div>`;
+            }).join('')}
+            <div class="prompts-title" style="margin-top:12px">💬 QC 프롬프트</div>
+            <div class="prompt-block">
+              <div class="prompt-text">${ph.qc.prompt}</div>
+              <button class="copy-btn" onclick="copyPrompt(this,${JSON.stringify(ph.qc.prompt)})">복사</button>
+            </div>
+          </div>
+        </div>`:''}
+
+        ${ph.log?`
+        <div class="section log-section">
+          <div class="section-head log-head" onclick="toggleSection('log-${ph.id}')">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="section-badge" style="background:#f59e0b">LOG</span>
+              <span class="section-title" style="color:#b45309">📝 스프린트 진행 기록</span>
+            </div>
+            <span class="step-arrow" id="seca-log-${ph.id}" style="transform:${state.openSections['log-'+ph.id]?'rotate(180deg)':'none'}">▾</span>
+          </div>
+          <div class="section-body" id="sec-log-${ph.id}" style="display:${state.openSections['log-'+ph.id]?'block':'none'}">
+            <div class="log-items">
+              <div class="log-file">${ph.log.file}</div>
+              ${ph.log.items.map(i=>`<div class="log-item"><span>•</span><span>${i}</span></div>`).join('')}
+            </div>
+            <div class="prompts-title">💬 LOG 프롬프트</div>
+            <div class="prompt-block">
+              <div class="prompt-text">${ph.log.prompt}</div>
+              <button class="copy-btn" onclick="copyPrompt(this,${JSON.stringify(ph.log.prompt)})">복사</button>
+            </div>
+          </div>
+        </div>`:''}
+
+        ${ph.git?`
+        <div class="section git-section">
+          <div class="section-head git-head" onclick="toggleSection('git-${ph.id}')">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="section-badge" style="background:#334155">GIT</span>
+              <span class="section-title" style="color:#334155">${ph.git.branch} → ${ph.git.pr} PR</span>
+            </div>
+            <span class="step-arrow" id="seca-git-${ph.id}" style="transform:${state.openSections['git-'+ph.id]?'rotate(180deg)':'none'}">▾</span>
+          </div>
+          <div class="section-body" id="sec-git-${ph.id}" style="display:${state.openSections['git-'+ph.id]?'block':'none'}">
+            <div class="git-code">
+              ${ph.git.commands.map(c=>`<div class="git-line ${c.startsWith('#')?'comment':'cmd'}">${c}</div>`).join('')}
+              <button class="git-copy" onclick="copyPrompt(this,${JSON.stringify(ph.git.commands.join('\n'))})">전체 복사</button>
+            </div>
+          </div>
+        </div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+
+  updateProgress();
+}
+
+render();
+</script>
+</body>
+</html>
