@@ -283,9 +283,23 @@ function toggleSection(key){
 }
 
 function copyPrompt(btn, text){
-  navigator.clipboard.writeText(text);
-  btn.textContent='✓ 복사됨'; btn.className='copy-btn done';
-  setTimeout(()=>{ btn.textContent='복사'; btn.className='copy-btn'; },1500);
+  const success = () => {
+    btn.textContent='✓ 복사됨'; btn.className='copy-btn done';
+    setTimeout(()=>{ btn.textContent='복사'; btn.className='copy-btn'; },1500);
+  };
+  const fallback = () => {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.cssText='position:fixed;opacity:0;top:0;left:0';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    success();
+  };
+  if(navigator.clipboard && window.isSecureContext){
+    navigator.clipboard.writeText(text).then(success).catch(fallback);
+  } else {
+    fallback();
+  }
 }
 
 function render(){
