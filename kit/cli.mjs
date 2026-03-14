@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 import readline from 'node:readline';
+import https from 'node:https';
 
 // ─── ANSI Colors ────────────────────────────────────────────────────────────
 const C = {
@@ -1051,6 +1052,35 @@ async function cmdImportFromClaude(targetDir) {
   console.log();
 }
 
+function fetchLatestVersion(packageName) {
+  return new Promise((resolve) => {
+    const req = https.get(
+      `https://registry.npmjs.org/${packageName}/latest`,
+      { headers: { 'User-Agent': 'claude-code-kit-cli' } },
+      (res) => {
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => {
+          try { resolve(JSON.parse(data).version || null); }
+          catch { resolve(null); }
+        });
+      }
+    );
+    req.on('error', () => resolve(null));
+    req.setTimeout(5000, () => { req.destroy(); resolve(null); });
+  });
+}
+
+function compareVersions(current, latest) {
+  const parse = v => v.split('.').map(Number);
+  const [cMaj, cMin, cPat] = parse(current);
+  const [lMaj, lMin, lPat] = parse(latest);
+  if (lMaj !== cMaj) return lMaj > cMaj ? 'major' : null;
+  if (lMin !== cMin) return lMin > cMin ? 'minor' : null;
+  if (lPat !== cPat) return lPat > cPat ? 'patch' : null;
+  return null;
+}
+
 async function cmdUpdate() {
   console.log();
   console.log(bold('🔄 claude-code-kit 업데이트'));
@@ -1059,12 +1089,39 @@ async function cmdUpdate() {
   // 현재 버전 확인
   const pkgPath = path.join(KIT_ROOT, 'package.json');
   let currentVersion = '?';
+  let packageName = 'claude-code-kit';
   if (fs.existsSync(pkgPath)) {
-    try { currentVersion = JSON.parse(fs.readFileSync(pkgPath, 'utf8')).version || '?'; } catch {}
+    try {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+      currentVersion = pkg.version || '?';
+      packageName = pkg.name || packageName;
+    } catch {}
   }
   console.log(c('gray', `  현재 버전: v${currentVersion}`));
   console.log(c('gray', `  kit 경로: ${KIT_ROOT}`));
   console.log(c('gray', `  state 경로: ${STATE_PATH} ${fs.existsSync(STATE_PATH) ? c('green','✓') : c('red','없음')}`));
+  console.log();
+
+  // npm 최신 버전 체크
+  process.stdout.write(c('gray', '  npm 최신 버전 확인 중...'));
+  const latestVersion = await fetchLatestVersion(packageName);
+  process.stdout.write('\r' + ' '.repeat(30) + '\r');
+
+  if (latestVersion && currentVersion !== '?') {
+    const diff = compareVersions(currentVersion, latestVersion);
+    if (diff) {
+      const diffColor = diff === 'major' ? 'red' : diff === 'minor' ? 'yellow' : 'cyan';
+      console.log(`  현재 버전: ${c('gray', 'v' + currentVersion)}`);
+      console.log(`  최신 버전: ${c(diffColor, 'v' + latestVersion)}  ← ${c(diffColor, '업데이트 있음!')}`);
+      console.log();
+      console.log(`  변경 내용: ${c('cyan', `https://github.com/astudyinglady-max/claude-code-kit/releases/tag/v${latestVersion}`)}`);
+    } else {
+      console.log(`  ${c('green', '✓')} 최신 버전입니다. ${c('gray', '(v' + currentVersion + ')')}`);
+    }
+  } else if (!latestVersion) {
+    console.log(c('yellow', '  ⚠  npm 버전 확인 실패 (네트워크를 확인하세요)'));
+    console.log(c('gray', `  수동 확인: https://www.npmjs.com/package/${packageName}`));
+  }
   console.log();
 
   // state.json이 ROOT/.workflow에 있는지 확인 (새 구조)
