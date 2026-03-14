@@ -159,6 +159,15 @@
             <option value="hold">보류</option>
           </select>
         </div>
+        <div class="form-group full"><label>기술 스택</label>
+          <select id="inp-stack">
+            <option value="nextjs-express">Next.js + Express (Prisma + PostgreSQL)</option>
+            <option value="nextjs-fullstack">Next.js 풀스택 (API Routes — Vercel 친화적)</option>
+            <option value="react-fastapi">React + FastAPI (Vite + Python)</option>
+            <option value="vue-express">Vue 3 + Express (Vite + Prisma + PostgreSQL)</option>
+            <option value="custom">커스텀 (기본 템플릿)</option>
+          </select>
+        </div>
         <div class="form-group"><label>시작일</label><input type="date" id="inp-start"></div>
         <div class="form-group"><label>마감일</label><input type="date" id="inp-end"></div>
         <div class="form-group full"><label>설명</label><textarea id="inp-desc" placeholder="프로젝트 간단 설명"></textarea></div>
@@ -174,8 +183,8 @@
   </div>
 
   <!-- WORKFLOW TAB -->
-  <div id="view-workflow" style="display:none">
-    <iframe src="workflow.html" id="workflow-frame" style="width:100%;height:calc(100vh - 120px);border:none;border-radius:12px;display:block"></iframe>
+  <div id="view-workflow" style="display:none;margin:-20px -24px">
+    <iframe id="workflow-frame" src="workflow.html" style="width:100%;height:calc(100vh - 110px);border:none;display:block"></iframe>
   </div>
 
   <!-- BOARD TAB -->
@@ -251,6 +260,157 @@ const PHASES = [
   ]}
 ];
 
+const _PH_COMMON_0 = {id:0,name:"🚀 Git & 스프린트 초기화",sub:"저장소 & GitHub Projects 세팅",color:"#0f172a",steps:[
+  {id:"p0s0",label:"Git 저장소 초기화",qa:false},
+  {id:"p0s1",label:"브랜치 전략 설정",qa:false},
+  {id:"p0s2",label:"GitHub Projects 스프린트 구성",qa:false}
+]};
+const _PH_COMMON_1 = {id:1,name:"📋 기획",sub:"프로젝트의 뼈대를 잡는 단계",color:"#8b5cf6",steps:[
+  {id:"p1s0",label:"프로젝트 초기 설정 (README, CLAUDE.md)",qa:false},
+  {id:"p1s1",label:"요구사항 & 차별화 정의",qa:true},
+  {id:"p1s2",label:"기술 스택 선택 근거 문서화",qa:true},
+  {id:"p1s3",label:"기획 QC",qa:false,isQC:true},
+  {id:"p1s4",label:"스프린트 진행 기록 (sprint-log.md)",qa:true},
+  {id:"p1s5",label:"Git 커밋 & PR",qa:false}
+]};
+const _PH_COMMON_2 = {id:2,name:"🎨 디자인",sub:"UI 규칙과 컴포넌트 설계",color:"#ec4899",steps:[
+  {id:"p2s0",label:"디자인 시스템 정의 (디자인.md)",qa:false},
+  {id:"p2s1",label:"컴포넌트 설계 (컴포넌트목록.md)",qa:false},
+  {id:"p2s2",label:"페이지 & 사용자 흐름 설계",qa:true},
+  {id:"p2s3",label:"디자인 QC",qa:false,isQC:true},
+  {id:"p2s4",label:"스프린트 진행 기록",qa:true},
+  {id:"p2s5",label:"Git 커밋 & PR",qa:false}
+]};
+const _PH_COMMON_5 = {id:5,name:"🔀 스프린트 마무리",sub:"develop → main 머지 & 다음 스프린트",color:"#f59e0b",steps:[
+  {id:"p5s0",label:"E2E 통합 테스트 (Playwright)",qa:true},
+  {id:"p5s1",label:"스프린트 회고 작성",qa:true},
+  {id:"p5s2",label:"다음 스프린트 계획",qa:false},
+  {id:"p5s3",label:"develop → main 머지 & 태그",qa:false}
+]};
+
+const PHASES_BY_STACK = {
+  'nextjs-express': [
+    _PH_COMMON_0, _PH_COMMON_1, _PH_COMMON_2,
+    {id:3,name:"🖥️ 프론트엔드",sub:"Next.js 15 App Router 구현",color:"#0ea5e9",steps:[
+      {id:"p3s0",label:"Next.js 프로젝트 초기화 & Jest 환경",qa:true},
+      {id:"p3s1",label:"공통 컴포넌트 생성 + 단위 테스트",qa:true},
+      {id:"p3s2",label:"레이아웃 & 페이지 구현",qa:false},
+      {id:"p3s3",label:"API 연동 & 상태관리 + 훅 테스트",qa:true},
+      {id:"p3s4",label:"프론트엔드 QC",qa:false,isQC:true},
+      {id:"p3s5",label:"스프린트 진행 기록",qa:true},
+      {id:"p3s6",label:"Git 커밋 & PR",qa:false}
+    ]},
+    {id:4,name:"⚙️ 백엔드",sub:"Express + Prisma + PostgreSQL",color:"#10b981",steps:[
+      {id:"p4s0",label:"Express 서버 초기화 & Jest 환경",qa:true},
+      {id:"p4s1",label:"DB 설계 & 연결 (Prisma schema)",qa:false},
+      {id:"p4s2",label:"인증 구현 + 단위 테스트",qa:true},
+      {id:"p4s3",label:"API 라우터 구현 + 단위 테스트",qa:true},
+      {id:"p4s4",label:"배포 & CI/CD 자동 테스트 설정",qa:true},
+      {id:"p4s5",label:"백엔드 QC",qa:false,isQC:true},
+      {id:"p4s6",label:"스프린트 진행 기록",qa:true},
+      {id:"p4s7",label:"Git 커밋 & PR",qa:false}
+    ]},
+    _PH_COMMON_5
+  ],
+  'nextjs-fullstack': [
+    _PH_COMMON_0, _PH_COMMON_1, _PH_COMMON_2,
+    {id:3,name:"🖥️ 풀스택 프론트엔드",sub:"Next.js App Router + Server Components",color:"#0ea5e9",steps:[
+      {id:"p3s0",label:"Next.js 프로젝트 초기화 & Jest 환경",qa:true},
+      {id:"p3s1",label:"공통 컴포넌트 생성 + 단위 테스트",qa:true},
+      {id:"p3s2",label:"레이아웃 & 페이지 구현",qa:false},
+      {id:"p3s3",label:"Server Actions & 클라이언트 훅 테스트",qa:true},
+      {id:"p3s4",label:"프론트엔드 QC",qa:false,isQC:true},
+      {id:"p3s5",label:"스프린트 진행 기록",qa:true},
+      {id:"p3s6",label:"Git 커밋 & PR",qa:false}
+    ]},
+    {id:4,name:"🗄️ API & 데이터",sub:"Next.js API Routes + Prisma",color:"#10b981",steps:[
+      {id:"p4s0",label:"DB 설계 & 연결 (Prisma schema)",qa:false},
+      {id:"p4s1",label:"API Route 구현 + 단위 테스트",qa:true},
+      {id:"p4s2",label:"인증 구현 (NextAuth)",qa:true},
+      {id:"p4s3",label:"Vercel 배포 & 환경변수 설정",qa:false},
+      {id:"p4s4",label:"백엔드 QC",qa:false,isQC:true},
+      {id:"p4s5",label:"스프린트 진행 기록",qa:true},
+      {id:"p4s6",label:"Git 커밋 & PR",qa:false}
+    ]},
+    _PH_COMMON_5
+  ],
+  'react-fastapi': [
+    _PH_COMMON_0, _PH_COMMON_1, _PH_COMMON_2,
+    {id:3,name:"🖥️ 프론트엔드",sub:"React + Vite 구현",color:"#0ea5e9",steps:[
+      {id:"p3s0",label:"React+Vite 초기화 & 테스트 환경 (Vitest)",qa:true},
+      {id:"p3s1",label:"공통 컴포넌트 생성 + 단위 테스트",qa:true},
+      {id:"p3s2",label:"페이지 & 라우팅 구현 (React Router)",qa:false},
+      {id:"p3s3",label:"API 연동 & 상태관리 (React Query)",qa:true},
+      {id:"p3s4",label:"프론트엔드 QC",qa:false,isQC:true},
+      {id:"p3s5",label:"스프린트 진행 기록",qa:true},
+      {id:"p3s6",label:"Git 커밋 & PR",qa:false}
+    ]},
+    {id:4,name:"🐍 백엔드",sub:"FastAPI + SQLAlchemy + Python",color:"#10b981",steps:[
+      {id:"p4s0",label:"FastAPI 프로젝트 초기화 & pytest 환경",qa:true},
+      {id:"p4s1",label:"DB 설계 (SQLAlchemy models + Alembic)",qa:false},
+      {id:"p4s2",label:"인증 구현 (JWT + 단위 테스트)",qa:true},
+      {id:"p4s3",label:"API 엔드포인트 구현 + 단위 테스트",qa:true},
+      {id:"p4s4",label:"배포 & CI/CD (Docker + GitHub Actions)",qa:true},
+      {id:"p4s5",label:"백엔드 QC",qa:false,isQC:true},
+      {id:"p4s6",label:"스프린트 진행 기록",qa:true},
+      {id:"p4s7",label:"Git 커밋 & PR",qa:false}
+    ]},
+    _PH_COMMON_5
+  ],
+  'vue-express': [
+    _PH_COMMON_0, _PH_COMMON_1, _PH_COMMON_2,
+    {id:3,name:"🟢 프론트엔드",sub:"Vue 3 + Vite 구현",color:"#0ea5e9",steps:[
+      {id:"p3s0",label:"Vue 3 + Vite 초기화 & 테스트 환경 (Vitest)",qa:true},
+      {id:"p3s1",label:"공통 컴포넌트 생성 + 단위 테스트",qa:true},
+      {id:"p3s2",label:"Vue Router & 페이지 구현",qa:false},
+      {id:"p3s3",label:"Pinia 상태관리 & API 연동 + 훅 테스트",qa:true},
+      {id:"p3s4",label:"프론트엔드 QC",qa:false,isQC:true},
+      {id:"p3s5",label:"스프린트 진행 기록",qa:true},
+      {id:"p3s6",label:"Git 커밋 & PR",qa:false}
+    ]},
+    {id:4,name:"⚙️ 백엔드",sub:"Express + Prisma + PostgreSQL",color:"#10b981",steps:[
+      {id:"p4s0",label:"Express 서버 초기화 & Jest 환경",qa:true},
+      {id:"p4s1",label:"DB 설계 & 연결 (Prisma schema)",qa:false},
+      {id:"p4s2",label:"인증 구현 + 단위 테스트",qa:true},
+      {id:"p4s3",label:"API 라우터 구현 + 단위 테스트",qa:true},
+      {id:"p4s4",label:"배포 & CI/CD 자동 테스트 설정",qa:true},
+      {id:"p4s5",label:"백엔드 QC",qa:false,isQC:true},
+      {id:"p4s6",label:"스프린트 진행 기록",qa:true},
+      {id:"p4s7",label:"Git 커밋 & PR",qa:false}
+    ]},
+    _PH_COMMON_5
+  ],
+  'custom': [
+    _PH_COMMON_0, _PH_COMMON_1, _PH_COMMON_2,
+    {id:3,name:"🖥️ 프론트엔드",sub:"화면 구현 단계",color:"#0ea5e9",steps:[
+      {id:"p3s0",label:"프로젝트 초기화 & 테스트 환경",qa:true},
+      {id:"p3s1",label:"공통 컴포넌트 생성 + 단위 테스트",qa:true},
+      {id:"p3s2",label:"레이아웃 & 페이지 구현",qa:false},
+      {id:"p3s3",label:"API 연동 & 상태관리",qa:true},
+      {id:"p3s4",label:"프론트엔드 QC",qa:false,isQC:true},
+      {id:"p3s5",label:"스프린트 진행 기록",qa:true},
+      {id:"p3s6",label:"Git 커밋 & PR",qa:false}
+    ]},
+    {id:4,name:"⚙️ 백엔드",sub:"서버 & 데이터 구현 단계",color:"#10b981",steps:[
+      {id:"p4s0",label:"서버 초기화 & 테스트 환경",qa:true},
+      {id:"p4s1",label:"DB 설계 & 연결",qa:false},
+      {id:"p4s2",label:"인증 구현 + 단위 테스트",qa:true},
+      {id:"p4s3",label:"API 구현 + 단위 테스트",qa:true},
+      {id:"p4s4",label:"배포 & CI/CD 설정",qa:true},
+      {id:"p4s5",label:"백엔드 QC",qa:false,isQC:true},
+      {id:"p4s6",label:"스프린트 진행 기록",qa:true},
+      {id:"p4s7",label:"Git 커밋 & PR",qa:false}
+    ]},
+    _PH_COMMON_5
+  ]
+};
+
+function getPhasesForProject(pid){
+  const proj = state.projects.find(p=>p.id===pid);
+  const stack = (proj && proj.stack) ? proj.stack : 'nextjs-express';
+  return PHASES_BY_STACK[stack] || PHASES_BY_STACK['nextjs-express'];
+}
+
 const ROLES = ["전체","기획","디자인","프론트","백엔드"];
 let state = JSON.parse(localStorage.getItem('pb_state') || '{"projects":[],"selected":null,"stepData":{}}');
 let openPhases = {};
@@ -300,10 +460,108 @@ function save(){ localStorage.setItem('pb_state', JSON.stringify(state)) }
 
 function showTab(t){
   document.getElementById('view-projects').style.display = t==='projects'?'block':'none';
+  document.getElementById('view-workflow').style.display = t==='workflow'?'block':'none';
   document.getElementById('view-board').style.display = t==='board'?'block':'none';
   document.querySelectorAll('.tab').forEach(el=>el.classList.remove('active'));
   document.getElementById('tab-'+t).classList.add('active');
   if(t==='board') renderBoard();
+}
+
+function renderWorkflow(){
+  const ws = window.__WORKFLOW_STATE__;
+  const completed = (ws && ws.completedSteps) ? ws.completedSteps : [];
+  const allSteps = PHASES.reduce((a,ph)=>a+ph.steps.length,0);
+  const totalDone = completed.length;
+  const pct = allSteps ? Math.round(totalDone/allSteps*100) : 0;
+
+  // 다음 할 일 찾기
+  let nextStepId = null;
+  outer: for(const ph of PHASES){
+    for(const s of ph.steps){
+      if(!completed.includes(s.id)){ nextStepId=s.id; break outer; }
+    }
+  }
+
+  const projName = ws&&ws.project&&ws.project.name ? ws.project.name : null;
+  const updatedAt = ws&&ws.updatedAt ? new Date(ws.updatedAt).toLocaleDateString('ko-KR') : '';
+
+  let html = '';
+
+  // 미연결 배너
+  if(!projName){
+    html += `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
+      <span style="font-size:20px">⚠️</span>
+      <div>
+        <div style="font-weight:700;color:#92400e;font-size:14px">워크플로우가 연결되지 않았습니다</div>
+        <div style="font-size:12px;color:#b45309;margin-top:2px">프로젝트 폴더에서 실행 →
+          <code style="background:#1e293b;color:#86efac;padding:2px 8px;border-radius:4px;margin-left:4px">npx claude-code-kit init</code>
+          후 <code style="background:#1e293b;color:#86efac;padding:2px 8px;border-radius:4px">sync</code>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // 전체 진도 헤더
+  html += `<div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:16px 20px;margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div>
+        <div style="font-size:17px;font-weight:700">${projName||'(프로젝트 미설정)'}</div>
+        ${updatedAt?`<div style="font-size:12px;color:#94a3b8;margin-top:2px">마지막 업데이트: ${updatedAt}</div>`:''}
+      </div>
+      <div style="display:flex;gap:20px">
+        <div style="text-align:center"><div style="font-size:22px;font-weight:800;color:#6366f1">${pct}%</div><div style="font-size:11px;color:#94a3b8">전체 진도</div></div>
+        <div style="text-align:center"><div style="font-size:22px;font-weight:800;color:#10b981">${totalDone}</div><div style="font-size:11px;color:#94a3b8">완료</div></div>
+        <div style="text-align:center"><div style="font-size:22px;font-weight:800;color:#475569">${allSteps}</div><div style="font-size:11px;color:#94a3b8">전체</div></div>
+      </div>
+    </div>
+    <div style="background:#e2e8f0;border-radius:999px;height:8px;overflow:hidden">
+      <div style="height:100%;border-radius:999px;background:linear-gradient(90deg,#6366f1,#0ea5e9);width:${pct}%;transition:width .5s"></div>
+    </div>
+  </div>`;
+
+  // Phase 목록
+  PHASES.forEach(ph=>{
+    const phDone = ph.steps.filter(s=>completed.includes(s.id)).length;
+    const phPct  = Math.round(phDone/ph.steps.length*100);
+    const status = phDone===ph.steps.length?'done': phDone>0?'active':'pending';
+    const statusLabel = {done:'<span style="color:#10b981;font-size:12px;font-weight:600">✓ 완료</span>', active:'<span style="color:#f59e0b;font-size:12px;font-weight:600">진행중</span>', pending:'<span style="color:#cbd5e1;font-size:12px">대기</span>'}[status];
+
+    html += `<div style="background:#fff;border-radius:12px;border:1.5px solid ${status==='active'?ph.color:'#e2e8f0'};border-left:4px solid ${ph.color};margin-bottom:10px;overflow:hidden">
+      <div style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:26px;height:26px;border-radius:50%;background:${ph.color};color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${ph.id}</div>
+          <div>
+            <div style="font-size:14px;font-weight:700">${ph.name}</div>
+            <div style="font-size:11px;color:#94a3b8">${ph.sub}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#64748b">
+          <span>${phDone}/${ph.steps.length}</span>
+          <div style="width:80px;height:6px;background:#e2e8f0;border-radius:999px;overflow:hidden">
+            <div style="height:100%;background:${ph.color};border-radius:999px;width:${phPct}%"></div>
+          </div>
+          ${statusLabel}
+        </div>
+      </div>
+      <div style="padding:0 16px 12px">
+        ${ph.steps.map(s=>{
+          const isDone = completed.includes(s.id);
+          const isNext = s.id===nextStepId;
+          return `<div style="display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:8px;margin-bottom:3px;background:${isNext?'#f0f9ff':'transparent'};border:1px solid ${isNext?'#bae6fd':'transparent'}">
+            <div style="width:18px;height:18px;border-radius:4px;border:2px solid ${isDone?'#10b981':'#cbd5e1'};background:${isDone?'#10b981':'#fff'};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              ${isDone?'<span style="color:#fff;font-size:10px;line-height:1">✓</span>':''}
+            </div>
+            <span style="font-size:13px;font-weight:${isNext?700:500};color:${isDone?'#94a3b8':'#1e293b'};${isDone?'text-decoration:line-through':''};">${s.label}</span>
+            ${s.qa?'<span style="font-size:10px;padding:1px 5px;border-radius:4px;background:#6366f1;color:#fff;font-weight:700;flex-shrink:0">★ QA</span>':''}
+            ${isNext?'<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:#0ea5e9;color:#fff;font-weight:700;flex-shrink:0;margin-left:auto">▶ 다음</span>':''}
+            <span style="font-size:10px;color:#cbd5e1;font-family:monospace;margin-left:auto;flex-shrink:0">${s.id}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  });
+
+  document.getElementById('workflow-container').innerHTML = html;
 }
 
 function addProject(){
@@ -313,6 +571,7 @@ function addProject(){
     id: 'p_'+Date.now(),
     name,
     status: document.getElementById('inp-status').value,
+    stack: document.getElementById('inp-stack').value,
     start: document.getElementById('inp-start').value,
     end: document.getElementById('inp-end').value,
     desc: document.getElementById('inp-desc').value,
@@ -342,8 +601,9 @@ function selectProject(id){
 
 function getProgress(pid){
   const sd = state.stepData[pid]||{};
-  const total = PHASES.reduce((a,ph)=>a+ph.steps.length,0);
-  const done = PHASES.reduce((a,ph)=>a+ph.steps.filter(s=>sd[s.id]?.done).length,0);
+  const phases = getPhasesForProject(pid);
+  const total = phases.reduce((a,ph)=>a+ph.steps.length,0);
+  const done = phases.reduce((a,ph)=>a+ph.steps.filter(s=>sd[s.id]?.done).length,0);
   return {total,done,pct:total?Math.round(done/total*100):0};
 }
 
@@ -362,6 +622,7 @@ function renderProjects(){
         <div class="pc-title">${p.name}</div>
         <span class="pc-badge ${statusClass[p.status]}">${statusLabel[p.status]}</span>
       </div>
+      ${p.stack?`<div style="font-size:11px;color:#6366f1;background:#eef2ff;display:inline-block;padding:1px 8px;border-radius:20px;font-weight:600;margin-bottom:6px">${{'nextjs-express':'Next.js+Express','nextjs-fullstack':'Next.js 풀스택','react-fastapi':'React+FastAPI','vue-express':'Vue3+Express','custom':'커스텀'}[p.stack]||p.stack}</div>`:''}
       ${p.desc?`<div style="font-size:12px;color:#64748b;margin-bottom:6px">${p.desc}</div>`:''}
       <div class="pc-progress-wrap"><div class="pc-progress-fill" style="width:${pct}%"></div></div>
       <div class="pc-meta">
@@ -392,8 +653,9 @@ function renderBoard(){
   document.getElementById('stat-total').textContent = total;
 
   const sd = state.stepData[proj.id]||{};
+  const phases = getPhasesForProject(proj.id);
   const container = document.getElementById('phases-container');
-  container.innerHTML = PHASES.map(ph=>{
+  container.innerHTML = phases.map(ph=>{
     const pDone = ph.steps.filter(s=>sd[s.id]?.done).length;
     const pPct = Math.round(pDone/ph.steps.length*100);
     const isOpen = openPhases[ph.id]!==false;

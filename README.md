@@ -51,7 +51,8 @@ node .kit/kit/cli.mjs init
   [1] Next.js + Express    Next.js 15 (App Router) + Express + Prisma + PostgreSQL
   [2] Next.js 풀스택       Next.js 15 (App Router + API Routes) — Vercel 친화적
   [3] React + FastAPI      React (Vite) + Python FastAPI + SQLAlchemy
-  [4] 커스텀               기본 템플릿 (프롬프트 직접 설정)
+  [4] Vue 3 + Express      Vue 3 (Vite) + Express + Prisma + PostgreSQL
+  [5] 커스텀               기본 템플릿 (프롬프트 직접 설정)
 ```
 
 초기화 후 프로젝트 `CLAUDE.md`에 현재 다음 할 일이 자동으로 주입됩니다. Claude Code가 파일을 읽는 순간 무엇을 해야 하는지 바로 알 수 있습니다.
@@ -90,6 +91,18 @@ Phase 1 — 기획 (1/3) | 전체 6%
 *완료 후: `node kit/cli.mjs complete p1s1`*
 <!-- claude-code-kit:end -->
 ```
+
+---
+
+## 웹 대시보드
+
+`docs/index.html`을 브라우저에서 열면 시각적인 대시보드를 확인할 수 있습니다.
+
+- **프로젝트 목록** — 기술 스택별 진행률 카드 (Next.js / React / Vue / 커스텀)
+- **작업 목록** — Phase별 Step, 프롬프트, QC, GIT 섹션 시각화 (`workflow.html` 연동)
+- **작업 보드** — 담당자 지정, 완료일, 메모, 코멘트 기능
+
+새 프로젝트 추가 시 기술 스택을 선택하면 해당 스택에 맞는 작업 목록이 자동으로 구성됩니다.
 
 ---
 

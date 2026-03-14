@@ -70,3 +70,24 @@ Phase-level keys: `qc` (checklist + prompt), `log` (sprint log prompt), `git` (b
 - `status.md` and `state.js` are auto-generated — the comment `DO NOT EDIT` at the top of each is intentional.
 - Files with `[placeholder]` in their paths (e.g. `app/[feature]/page.tsx`) are intentionally skipped in `import-from-claude` file detection.
 - The legacy state path migration (`.workflow/state.json` inside kit → `ROOT/.workflow/state.json`) must remain in `loadState()` for backwards compatibility.
+
+<!-- claude-code-kit:start -->
+## 다음 할 일 (claude-code-kit)
+
+**`p0s0`** Git 저장소 초기화
+Phase 0 — Git & 스프린트 초기화 (0/3) | 전체 0%
+
+**생성할 파일:** `.gitignore`, `.github/pull_request_template.md`, `.github/ISSUE_TEMPLATE/feature.md`
+
+### 프롬프트 [1/3]
+Next.js + Node.js 프로젝트에 맞는 .gitignore 파일을 만들어줘. node_modules, .env, .next, dist 등 포함.
+
+### 프롬프트 [2/3]
+GitHub PR 템플릿을 만들어줘. 작업 내용 요약, 변경 유형 체크박스(feat/fix/docs/refactor), 테스트 여부, 스크린샷 섹션 포함.
+
+### 프롬프트 [3/3]
+GitHub Issue 템플릿 두 가지를 만들어줘. 하나는 기능 요청(feature request), 하나는 버그 리포트(bug report) 형식으로.
+
+---
+*완료 후: `node kit/cli.mjs complete p0s0`*
+<!-- claude-code-kit:end -->
